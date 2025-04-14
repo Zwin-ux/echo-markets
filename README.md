@@ -1,13 +1,13 @@
- Daily Trading Challenge
-
-A  trading simulation hub
+Echo Markets
+Our goal is being the robin hood to this scam https://godelterminal.com/
 
 ## Key Features
-- Daily $100 trading challenge???
-- Real-time market simulation DEF
-- Portfolio tracking Wokring
-- Interactive modules (Terminal, Charts, News, etc.) buggest visually
-- Leaderboard competition working conceptaully
+-Strong Trading information
+-Virtaul stock market  trade capibility (Expand to make this way bigger) (deciding per day or ???)
+-Leaderboards
+-News
+-Mulitple markets
+
 
 ## Technical Stack
 - Next.js 15.1.0
@@ -17,12 +17,16 @@ A  trading simulation hub
 - Radix UI components
 
 ## Module System
+Desired Modules
+
 Standardized module IDs:
 ```
 terminal, charts, news, portfolio, trading, 
 leaderboard, narrator, simulation, education, 
 bookmarks, social, alerts
 ```
+
+Terminal/charts/news/portfolio/trading/leaderboard/narratorior/simulator are functioning to at least beta standered 
 
 ## Future Focus Areas
 1. **Performance Optimizations** -The entire thing looks really ugly and fucked as we add more and more functions
