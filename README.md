@@ -1,5 +1,4 @@
-Echo Markets
-Our goal is being the robin hood to this scam https://godelterminal.com/
+
 
 ## Key Features
 -Strong Trading information
