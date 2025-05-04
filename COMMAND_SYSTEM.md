@@ -80,6 +80,26 @@ All commands now follow a consistent pattern with proper validation and error ha
 - [ ] Add command suggestions
 - [ ] Enhance visual feedback for command execution
 
+## Implementation Details
+
+The command system is implemented using React context to manage the command state and execution. Each command is defined as a `CommandDefinition` object, which includes the command name, description, usage, examples, and handler function.
+
+The `CommandProvider` component provides the command context to the application. It manages the command history and provides the `executeCommand` function to execute commands.
+
+## Roadmap
+
+- [ ] Implement external API integration for real-time market data.
+- [ ] Implement advanced portfolio analysis features.
+- [ ] Improve user experience features such as command auto-completion and suggestions.
+
+## Contributing
+
+See [CONTRIBUTING.md](https://example.com/contributing) for guidelines on how to contribute to the project.
+
+## Current Issues
+
+- There are several linting errors related to argument counts in the command handlers in `command-context.tsx`. These should be addressed in a future pass.
+
 ## Contributing Guidelines
 
 ### Before Pushing

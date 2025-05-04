@@ -3,11 +3,15 @@
 import { useState, useEffect } from "react"
 import { TrendingUp, Maximize2, Minimize2, X, RefreshCw, ArrowUp, ArrowDown } from "lucide-react"
 import { usePortfolio } from "@/contexts/portfolio-context"
+import type { LimitOrder } from "@/contexts/portfolio-context"
 import { useUser } from "@/contexts/user-context"
 import { useUserStats } from '@/contexts/user-stats-context'
 import { useModule } from '@/contexts/module-context'
+import { useGameEngine, createLevelUpEvent, createXPGainEvent } from '@/contexts/game-engine-context'
+import { toast } from '@/hooks/use-toast'
 
 export default function TradingModule() {
+  const { dispatchEvent, subscribe } = useGameEngine();
   const [isMaximized, setIsMaximized] = useState(false)
   const [symbol, setSymbol] = useState("AAPL")
   const [quantity, setQuantity] = useState("10")
@@ -15,7 +19,7 @@ export default function TradingModule() {
   const [limitPrice, setLimitPrice] = useState("")
   const [action, setAction] = useState<"buy" | "sell">("buy")
   const [estimatedValue, setEstimatedValue] = useState(0)
-  const { portfolio, addToPortfolio, removeFromPortfolio } = usePortfolio()
+  const { portfolio, addToPortfolio, removeFromPortfolio, placeLimitOrder, cancelLimitOrder, processLimitOrders } = usePortfolio()
   const { incrementTrades, addXP } = useUser()
   const { updateDailyReturn, incrementTrades: incrementUserTrades } = useUserStats()
   const { activeModules } = useModule()
@@ -46,32 +50,129 @@ export default function TradingModule() {
     )
   }, [quantity, action, symbol, currentStock.price, portfolio])
 
+  // --- Limit Order Processing ---
+  // Mock price update: call processLimitOrders whenever currentStock.price changes
+  useEffect(() => {
+    processLimitOrders({ [symbol]: currentStock.price })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStock.price])
+
+  // Listen for game events and show toast notifications
+  useEffect(() => {
+    const listener = (event: any) => {
+      if (event.type === 'achievement') {
+        toast({
+          title: `Achievement unlocked: ${event.payload.name}`,
+          description: event.payload.description,
+        })
+      }
+      if (event.type === 'player_level_up') {
+        toast({
+          title: `Level Up!`,
+          description: `You reached level ${event.payload.level}`,
+        })
+      }
+      if (event.type === 'xp_gain') {
+        toast({
+          title: `XP Gained`,
+          description: `+${event.payload.amount} XP`,
+        })
+      }
+      if (event.type === 'milestone') {
+        toast({
+          title: `Milestone reached: ${event.payload.name}`,
+          description: event.payload.description,
+        })
+      }
+    }
+    const unsubscribe = subscribe(listener)
+    return () => unsubscribe()
+  }, [subscribe])
+
   if (!isVisible) return null
 
+  /**
+   * Handles trade execution based on order type (market or limit)
+   * - Market orders execute immediately at current price
+   * - Limit orders are stubbed for future implementation
+   */
+  // Handles trade execution for both market and limit orders
   const handleTrade = () => {
     const qty = Number.parseInt(quantity)
-    if (isNaN(qty) || qty <= 0) return
-
+    if (isNaN(qty) || qty <= 0) {
+      toast({ title: "Invalid quantity", description: "Please enter a valid positive number of shares" })
+      return
+    }
+    if (orderType === 'limit') {
+      const limitPriceNum = Number.parseFloat(limitPrice)
+      if (isNaN(limitPriceNum) || limitPriceNum <= 0) {
+        toast({ title: "Invalid limit price", description: "Please enter a valid limit price" })
+        return
+      }
+      // Place a limit order
+      const result = placeLimitOrder({
+        symbol,
+        qty,
+        limitPrice: limitPriceNum,
+        action,
+      })
+      if (result.success) {
+        setQuantity("10")
+        setLimitPrice("")
+      }
+      return
+    }
+    // Market order logic (immediate execution)
     const price = currentStock.price
-    const returnAmount = action === 'buy' ? 0 : (price - currentStock.avgPrice) * qty
-    
     if (action === 'buy') {
-      const totalCost = price * qty
-      if (totalCost > portfolio.cash) return
-      addToPortfolio(symbol, qty, price)
+      const result = addToPortfolio(symbol, qty, price)
+      if (result.success) {
+        // Using 'milestone' as the most appropriate type for trade events
+        dispatchEvent({
+          id: `trade-buy-${Date.now()}`,
+          type: 'milestone',
+          payload: { action: 'buy', symbol, qty, price, orderType },
+          timestamp: Date.now(),
+        })
+        incrementUserTrades()
+        addXP(10)
+        dispatchEvent(createXPGainEvent(10))
+      }
     } else {
       const holding = portfolio.holdings.find((h) => h.symbol === symbol)
-      if (!holding || holding.shares < qty) return
-      removeFromPortfolio(symbol, qty, price)
-      
-      // Update stats
-      const profit = (price - holding.avgPrice) * qty
-      const returnPercent = (profit / (holding.avgPrice * qty)) * 100
-      updateDailyReturn(returnPercent)
+      if (!holding) {
+        toast({ title: "Stock not owned", description: `You don't own any shares of ${symbol}` })
+        return
+      }
+      const result = removeFromPortfolio(symbol, qty, price)
+      if (result.success) {
+        const profit = (price - holding.avgPrice) * qty
+        const returnPercent = (profit / (holding.avgPrice * qty)) * 100
+        updateDailyReturn(returnPercent)
+        incrementUserTrades()
+        const xpGain = profit > 0 ? 20 : 5
+        addXP(xpGain)
+        // Using 'milestone' as the most appropriate type for trade events
+        dispatchEvent({
+          id: `trade-sell-${Date.now()}`,
+          type: 'milestone',
+          payload: { action: 'sell', symbol, qty, price, profit, orderType },
+          timestamp: Date.now(),
+        })
+        if (profit > 1000) {
+          dispatchEvent({
+            id: `achievement-big-win-${Date.now()}`,
+            type: 'achievement',
+            payload: { name: 'Big Win', description: `Sold ${qty} ${symbol} for $${profit.toFixed(2)} profit!` },
+            timestamp: Date.now(),
+          })
+        }
+        dispatchEvent(createXPGainEvent(xpGain))
+        if (profit > 500) {
+          dispatchEvent(createLevelUpEvent(2))
+        }
+      }
     }
-
-    incrementUserTrades()
-    addXP(10)
   }
 
   return (
@@ -124,6 +225,50 @@ export default function TradingModule() {
               <div className="text-green-500/70">Low</div>
               <div>${currentStock.low.toFixed(2)}</div>
             </div>
+          </div>
+        </div>
+
+        {/* --- Limit Orders Table --- */}
+        <div className="mb-6">
+          <div className="text-xs font-bold mb-2">LIMIT ORDERS</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border border-green-500/20 bg-black rounded">
+              <thead className="bg-green-900/10">
+                <tr>
+                  <th className="p-2">Symbol</th>
+                  <th className="p-2">Action</th>
+                  <th className="p-2">Qty</th>
+                  <th className="p-2">Limit Price</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2">Time</th>
+                  <th className="p-2">Cancel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {portfolio.limitOrders.length === 0 && (
+                  <tr><td colSpan={7} className="text-center p-2 text-green-500/50">No limit orders</td></tr>
+                )}
+                {portfolio.limitOrders.slice().reverse().map((order: LimitOrder) => (
+                  <tr key={order.id} className={order.status === 'filled' ? 'bg-green-900/20' : order.status === 'cancelled' ? 'bg-red-900/20' : ''}>
+                    <td className="p-2 font-mono">{order.symbol}</td>
+                    <td className="p-2">{order.action.toUpperCase()}</td>
+                    <td className="p-2">{order.qty}</td>
+                    <td className="p-2">${order.limitPrice.toFixed(2)}</td>
+                    <td className="p-2 capitalize">
+                      <span className={order.status === 'open' ? 'text-yellow-400' : order.status === 'filled' ? 'text-green-400' : 'text-red-400'}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="p-2">{new Date(order.timestamp).toLocaleTimeString()}</td>
+                    <td className="p-2">
+                      {order.status === 'open' && (
+                        <button onClick={() => cancelLimitOrder(order.id)} className="text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/40 rounded text-red-400">Cancel</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 

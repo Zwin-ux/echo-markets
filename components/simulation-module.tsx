@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Globe, Maximize2, Minimize2, X, Play, Pause, RotateCcw } from "lucide-react"
 import { useModule } from "@/contexts/module-context"
+import { useGameEngine } from "@/contexts/game-engine-context"
 
 export default function SimulationModule() {
   const { activeModules } = useModule()
@@ -17,7 +18,36 @@ export default function SimulationModule() {
     inflation: number
     unemployment: number
     sentiment: string
+    eventImpact?: string
   }>(null)
+
+  // Integrate with the game engine
+  const { state: engineState, subscribe } = useGameEngine()
+
+  // Listen for tick and market events
+  useEffect(() => {
+    const listener = (event: any) => {
+      if (event.type === "tick") {
+        // Optionally update simulation state per tick
+        // (e.g., run background calculations, auto-advance simulation, etc.)
+      }
+      if (event.type === "market_news") {
+        // Show the market event's impact in the simulation results
+        setSimulationResults(prev => prev ? {
+          ...prev,
+          eventImpact: `${event.payload.headline} (${event.payload.impact})`
+        } : {
+          gdp: 2.5,
+          inflation: 3.2,
+          unemployment: 4.5,
+          sentiment: event.payload.impact === 'positive' ? 'bullish' : 'bearish',
+          eventImpact: `${event.payload.headline} (${event.payload.impact})`
+        })
+      }
+    }
+    const unsubscribe = subscribe(listener)
+    return () => unsubscribe()
+  }, [subscribe])
 
   if (!isVisible) return null
 

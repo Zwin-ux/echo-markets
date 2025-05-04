@@ -5,6 +5,8 @@ import { Trophy, Maximize2, Minimize2, X, RefreshCw, Search } from "lucide-react
 import { useUser } from "@/contexts/user-context"
 import { useUserStats } from '@/contexts/user-stats-context'
 import { useModule } from '@/contexts/module-context'
+import { useGameEngine } from '@/contexts/game-engine-context'
+import { toast } from '@/hooks/use-toast'
 
 type LeaderboardEntry = {
   rank: number
@@ -17,6 +19,7 @@ type LeaderboardEntry = {
 }
 
 export default function LeaderboardModule() {
+  const { subscribe } = useGameEngine();
   const [isMaximized, setIsMaximized] = useState(false)
   const [activeTab, setActiveTab] = useState<"returns" | "trades" | "winRate">("returns")
   const [searchQuery, setSearchQuery] = useState("")
@@ -24,6 +27,42 @@ export default function LeaderboardModule() {
   const { stats } = useUserStats()
   const { activeModules } = useModule()
   const isVisible = activeModules.includes('leaderboard')
+
+  // Listen for tick and progression/achievement events
+  useEffect(() => {
+    const listener = (event: any) => {
+      if (event.type === 'tick') {
+        // Could refresh leaderboard data here
+        console.log('Leaderboard tick update!')
+      }
+      if (event.type === 'achievement') {
+        toast({
+          title: `Leaderboard: Achievement unlocked!`,
+          description: event.payload.name,
+        })
+      }
+      if (event.type === 'player_level_up') {
+        toast({
+          title: `Leaderboard: Level Up!`,
+          description: `Level ${event.payload.level}`,
+        })
+      }
+      if (event.type === 'xp_gain') {
+        toast({
+          title: `Leaderboard: XP Gained`,
+          description: `+${event.payload.amount} XP`,
+        })
+      }
+      if (event.type === 'milestone') {
+        toast({
+          title: `Leaderboard: Milestone`,
+          description: event.payload.name,
+        })
+      }
+    }
+    const unsubscribe = subscribe(listener)
+    return () => unsubscribe()
+  }, [subscribe])
 
   if (!isVisible) return null
 
