@@ -1,238 +1,124 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Newspaper, Maximize2, Minimize2, X, RefreshCw, Filter, ThumbsUp, ThumbsDown } from "lucide-react"
+import React, { useState, useEffect, useCallback } from 'react';
+import { Newspaper, Maximize2, Minimize2, RefreshCw } from 'lucide-react'; // Removed Filter, ThumbsUp, ThumbsDown, X
+import { useGameEngine, GameEvent } from '@/contexts/game-engine-context'; // Import GameEvent
+import { NewsEvent } from '@/lib/models'; // Use our NewsEvent model
+import { fetcher } from '@/lib/api';
 
-type NewsItem = {
-  id: number
-  title: string
-  source: string
-  time: string
-  sentiment: "positive" | "negative" | "neutral"
-  category: "stocks" | "crypto" | "economy" | "tech"
-  liked?: boolean
-  disliked?: boolean
+// Define a type for the API response from GET /api/tick for news
+interface ApiTickGetResponseForNews {
+  newsEvents: NewsEvent[]; // Assuming GET /api/tick returns predefined narrative events here
+  // other fields might be present
 }
 
 export default function NewsFeedModule() {
-  const [isMaximized, setIsMaximized] = useState(false)
-  const [activeFilter, setActiveFilter] = useState<string | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
-  const [news, setNews] = useState<NewsItem[]>([])
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [newsEvents, setNewsEvents] = useState<NewsEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { subscribe } = useGameEngine(); // Removed engineState as it's not directly used
 
-  // Mock news data
+  const fetchInitialNews = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // The GET /api/tick endpoint returns all predefined narrativeEvents
+      const data = await fetcher<ApiTickGetResponseForNews>('/api/tick');
+      // Sort by timestamp descending if not already
+      const sortedEvents = data.newsEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setNewsEvents(sortedEvents);
+    } catch (error) {
+      console.error("Failed to fetch initial news:", error);
+      // Handle error appropriately, maybe set an error message in state
+      setNewsEvents([]); // Clear news events on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const mockNews: NewsItem[] = [
-      {
-        id: 1,
-        title: "Fed signals potential rate cuts later this year",
-        source: "Financial Times",
-        time: "2h ago",
-        sentiment: "positive",
-        category: "economy",
-      },
-      {
-        id: 2,
-        title: "Tech stocks rally as AI optimism continues",
-        source: "Wall Street Journal",
-        time: "3h ago",
-        sentiment: "positive",
-        category: "stocks",
-      },
-      {
-        id: 3,
-        title: "Bitcoin drops below $40k as regulatory concerns mount",
-        source: "CoinDesk",
-        time: "5h ago",
-        sentiment: "negative",
-        category: "crypto",
-      },
-      {
-        id: 4,
-        title: "Inflation data comes in cooler than expected",
-        source: "Bloomberg",
-        time: "6h ago",
-        sentiment: "positive",
-        category: "economy",
-      },
-      {
-        id: 5,
-        title: "New AI chip shortage could impact tech sector",
-        source: "TechCrunch",
-        time: "8h ago",
-        sentiment: "negative",
-        category: "tech",
-      },
-      {
-        id: 6,
-        title: "Retail sales disappoint, consumer spending slows",
-        source: "CNBC",
-        time: "10h ago",
-        sentiment: "negative",
-        category: "economy",
-      },
-      {
-        id: 7,
-        title: "Ethereum upgrade date confirmed, gas fees expected to drop",
-        source: "The Block",
-        time: "12h ago",
-        sentiment: "positive",
-        category: "crypto",
-      },
-    ]
+    fetchInitialNews();
+  }, [fetchInitialNews]);
 
-    setNews(mockNews)
-  }, [])
-
-  const filteredNews = activeFilter ? news.filter((item) => item.category === activeFilter) : news
-
-  const handleLike = (id: number) => {
-    setNews((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            liked: !item.liked,
-            disliked: false,
+  useEffect(() => {
+    const handleGameEvent = (event: GameEvent) => { // Use GameEvent type
+      if (event.type === 'market_news' && event.payload) {
+        const newEvent = event.payload as NewsEvent;
+        // Add new event to the beginning of the list, ensuring no duplicates if IDs are stable
+        setNewsEvents(prevEvents => {
+          // Prevent adding duplicate event if it somehow gets dispatched multiple times
+          if (prevEvents.find(e => e.id === newEvent.id && e.timestamp === newEvent.timestamp)) {
+            return prevEvents;
           }
-        }
-        return item
-      }),
-    )
-  }
+          return [newEvent, ...prevEvents].slice(0, 50); // Keep last 50 news items
+        });
+      } else if (event.type === 'initial_state_loaded' && event.payload && event.payload.initialNews) {
+        // If initial_state_loaded from GameEngineContext provides news, use it.
+        // This might be more efficient than fetchInitialNews if data is already there.
+        const initialEvents = event.payload.initialNews as NewsEvent[];
+        setNewsEvents(initialEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+        setIsLoading(false); // News loaded via context event
+      }
+    };
 
-  const handleDislike = (id: number) => {
-    setNews((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            disliked: !item.disliked,
-            liked: false,
-          }
-        }
-        return item
-      }),
-    )
-  }
+    const unsubscribe = subscribe(handleGameEvent);
+    return () => unsubscribe();
+  }, [subscribe, fetchInitialNews]); // Added fetchInitialNews to dependencies, though it might not be strictly needed if initial_state_loaded is robust.
+
+
+  const getSentimentLabel = (impactScore: number) => {
+    if (impactScore > 0.05) return { label: "Strong Positive", color: "text-green-400", bgColor: "bg-green-500/20" };
+    if (impactScore > 0) return { label: "Positive", color: "text-green-300", bgColor: "bg-green-500/10" };
+    if (impactScore < -0.05) return { label: "Strong Negative", color: "text-red-400", bgColor: "bg-red-500/20" };
+    if (impactScore < 0) return { label: "Negative", color: "text-red-300", bgColor: "bg-red-500/10" };
+    return { label: "Neutral", color: "text-blue-300", bgColor: "bg-blue-500/10" };
+  };
 
   return (
-    <div className={`flex flex-col bg-black border border-green-500/30 rounded-sm overflow-hidden`}>
+    <div className={`flex flex-col bg-black border border-green-500/30 rounded-sm overflow-hidden ${isMaximized ? 'fixed inset-0 z-50' : 'relative'}`}>
       <div className="flex items-center justify-between p-2 bg-green-500/10 border-b border-green-500/30">
         <div className="flex items-center">
-          <Newspaper size={14} className="mr-2" />
-          <span className="text-xs font-semibold">NEWS_FEED</span>
+          <Newspaper size={14} className="mr-2 text-green-400" />
+          <span className="text-xs font-semibold text-green-300">MARKET_NEWS_FEED</span>
         </div>
         <div className="flex space-x-1">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="p-1 hover:bg-green-500/20 rounded"
-            title="Filter News"
-          >
-            <Filter size={12} />
+          <button onClick={fetchInitialNews} className="p-1 hover:bg-green-500/20 rounded" title="Refresh News">
+            <RefreshCw size={12} className="text-green-400" />
           </button>
-          <button className="p-1 hover:bg-green-500/20 rounded">
-            <RefreshCw size={12} />
-          </button>
-          <button onClick={() => setIsMaximized(!isMaximized)} className="p-1 hover:bg-green-500/20 rounded">
-            {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-          </button>
-          <button className="p-1 hover:bg-green-500/20 rounded">
-            <X size={12} />
+          <button onClick={() => setIsMaximized(!isMaximized)} className="p-1 hover:bg-green-500/20 rounded" title={isMaximized ? "Minimize" : "Maximize"}>
+            {isMaximized ? <Minimize2 size={12} className="text-green-400" /> : <Maximize2 size={12} className="text-green-400" />}
           </button>
         </div>
       </div>
 
-      {showFilters && (
-        <div className="flex p-2 border-b border-green-500/30 bg-green-500/5">
-          <button
-            onClick={() => setActiveFilter(null)}
-            className={`text-xs px-2 py-1 rounded mr-1 ${
-              activeFilter === null ? "bg-green-500/30" : "bg-green-500/10 hover:bg-green-500/20"
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setActiveFilter("stocks")}
-            className={`text-xs px-2 py-1 rounded mr-1 ${
-              activeFilter === "stocks" ? "bg-green-500/30" : "bg-green-500/10 hover:bg-green-500/20"
-            }`}
-          >
-            Stocks
-          </button>
-          <button
-            onClick={() => setActiveFilter("crypto")}
-            className={`text-xs px-2 py-1 rounded mr-1 ${
-              activeFilter === "crypto" ? "bg-green-500/30" : "bg-green-500/10 hover:bg-green-500/20"
-            }`}
-          >
-            Crypto
-          </button>
-          <button
-            onClick={() => setActiveFilter("economy")}
-            className={`text-xs px-2 py-1 rounded mr-1 ${
-              activeFilter === "economy" ? "bg-green-500/30" : "bg-green-500/10 hover:bg-green-500/20"
-            }`}
-          >
-            Economy
-          </button>
-          <button
-            onClick={() => setActiveFilter("tech")}
-            className={`text-xs px-2 py-1 rounded ${
-              activeFilter === "tech" ? "bg-green-500/30" : "bg-green-500/10 hover:bg-green-500/20"
-            }`}
-          >
-            Tech
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto">
-        {filteredNews.length === 0 ? (
-          <div className="text-xs text-center py-4 text-green-500/50">No news matching your filter.</div>
+      <div className="flex-1 overflow-y-auto p-1">
+        {isLoading && newsEvents.length === 0 ? (
+          <div className="text-xs text-center py-4 text-green-500/50">Loading news...</div>
+        ) : !isLoading && newsEvents.length === 0 ? (
+          <div className="text-xs text-center py-4 text-green-500/50">No news events available.</div>
         ) : (
           <div className="divide-y divide-green-500/20">
-            {filteredNews.map((item) => (
-              <div key={item.id} className="p-3 hover:bg-green-500/5">
+            {newsEvents.map((event) => (
+              <div key={event.id + event.timestamp} className="p-3 hover:bg-green-500/5 transition-colors">
                 <div className="flex justify-between items-start mb-1">
-                  <div className="text-sm font-bold">{item.title}</div>
+                  <div className="text-sm font-semibold text-green-300">{event.title}</div>
                   <div
-                    className={`text-xs px-1.5 py-0.5 rounded ${
-                      item.sentiment === "positive"
-                        ? "bg-green-500/20 text-green-400"
-                        : item.sentiment === "negative"
-                          ? "bg-red-500/20 text-red-400"
-                          : "bg-blue-500/20 text-blue-400"
-                    }`}
+                    className={`text-xs px-1.5 py-0.5 rounded-sm ${getSentimentLabel(event.impact_score).bgColor} ${getSentimentLabel(event.impact_score).color}`}
                   >
-                    {item.sentiment === "positive" ? "Bullish" : item.sentiment === "negative" ? "Bearish" : "Neutral"}
+                    {getSentimentLabel(event.impact_score).label}
                   </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <div className="text-xs text-green-500/70">
-                    {item.source} • {item.time}
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleLike(item.id)}
-                      className={`p-1 rounded ${item.liked ? "bg-green-500/30" : "hover:bg-green-500/10"}`}
-                    >
-                      <ThumbsUp size={12} />
-                    </button>
-                    <button
-                      onClick={() => handleDislike(item.id)}
-                      className={`p-1 rounded ${item.disliked ? "bg-red-500/30" : "hover:bg-red-500/10"}`}
-                    >
-                      <ThumbsDown size={12} />
-                    </button>
-                  </div>
+                <p className="text-xs text-gray-400 mb-1 leading-relaxed">{event.body}</p>
+                <div className="text-xs text-green-500/70">
+                  Targets: {event.target_stocks.join(", ")} • {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </div>
               </div>
             ))}
           </div>
         )}
+         {isLoading && newsEvents.length > 0 && (
+          <div className="text-xs text-center py-2 text-green-500/50">Updating news...</div>
+        )}
       </div>
     </div>
-  )
+  );
 }
