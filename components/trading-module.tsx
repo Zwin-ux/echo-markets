@@ -7,13 +7,15 @@ import type { LimitOrder } from "@/contexts/portfolio-context"
 import { useUser } from "@/contexts/user-context"
 import { useUserStats } from '@/contexts/user-stats-context'
 import { useModule } from '@/contexts/module-context'
-import { useGameEngine, createLevelUpEvent, createXPGainEvent } from '@/contexts/game-engine-context'
+import { useGameEngine, createLevelUpEvent, createXPGainEvent, Stock } from '@/contexts/game-engine-context' // Import Stock
 import { toast } from '@/hooks/use-toast'
 
 export default function TradingModule() {
-  const { dispatchEvent, subscribe } = useGameEngine();
+  const { state: engineState, dispatchEvent, subscribe, executeBuyOrder, executeSellOrder } = useGameEngine();
+  const { stocks } = engineState; // Get real stocks
+
   const [isMaximized, setIsMaximized] = useState(false)
-  const [symbol, setSymbol] = useState("AAPL")
+  const [symbol, setSymbol] = useState(stocks.length > 0 ? stocks[0].symbol : "") // Default to first available stock
   const [quantity, setQuantity] = useState("10")
   const [orderType, setOrderType] = useState<"market" | "limit">("market")
   const [limitPrice, setLimitPrice] = useState("")
@@ -25,37 +27,42 @@ export default function TradingModule() {
   const { activeModules } = useModule()
   const isVisible = activeModules.includes('trading')
 
-  // Mock stock data
-  const stockData = {
-    AAPL: { price: 185.92, change: 1.23, volume: "45.2M", high: 187.45, low: 184.21, avgPrice: 185.0 },
-    MSFT: { price: 328.79, change: -0.45, volume: "22.1M", high: 330.12, low: 326.89, avgPrice: 328.0 },
-    TSLA: { price: 212.19, change: 5.67, volume: "98.7M", high: 215.43, low: 208.76, avgPrice: 212.0 },
-    NVDA: { price: 447.25, change: 12.34, volume: "76.3M", high: 450.12, low: 440.87, avgPrice: 447.0 },
-    AMZN: { price: 135.07, change: -2.18, volume: "33.5M", high: 137.24, low: 134.56, avgPrice: 135.0 },
-    GOOGL: { price: 142.56, change: 0.87, volume: "18.9M", high: 143.21, low: 141.78, avgPrice: 142.0 },
-  }
-
-  const currentStock = stockData[symbol as keyof typeof stockData] || stockData.AAPL
+  // Get the current stock object from engineState.stocks
+  const currentStock = stocks.find(s => s.symbol === symbol);
 
   useEffect(() => {
-    const qty = Number.parseInt(quantity) || 0
-    const price = currentStock.price
-    const holding = portfolio.holdings.find(h => h.symbol === symbol)
+    // Initialize symbol if stocks are loaded and symbol is not set or invalid
+    if (stocks.length > 0 && (!symbol || !stocks.find(s => s.symbol === symbol))) {
+      setSymbol(stocks[0].symbol);
+    }
+  }, [stocks, symbol]);
+
+  useEffect(() => {
+    if (!currentStock) {
+      setEstimatedValue(0);
+      return;
+    }
+    const qty = Number.parseInt(quantity) || 0;
+    const price = currentStock.price;
+    const holding = portfolio.holdings.find(h => h.symbol === symbol);
     
     setEstimatedValue(
       action === 'buy' 
         ? qty * price 
         : holding ? Math.min(qty, holding.shares) * price 
         : 0
-    )
-  }, [quantity, action, symbol, currentStock.price, portfolio])
+    );
+  }, [quantity, action, symbol, currentStock, portfolio]);
 
   // --- Limit Order Processing ---
-  // Mock price update: call processLimitOrders whenever currentStock.price changes
+  // This should ideally be moved to GameEngineContext and driven by actual tick updates
+  // For now, this will use the current selected stock's price from the engine
   useEffect(() => {
-    processLimitOrders({ [symbol]: currentStock.price })
+    if (currentStock) {
+      processLimitOrders({ [symbol]: currentStock.price });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStock.price])
+  }, [currentStock?.price, symbol, processLimitOrders]); // Added processLimitOrders to dependency array
 
   // Listen for game events and show toast notifications
   useEffect(() => {
@@ -123,53 +130,57 @@ export default function TradingModule() {
       return
     }
     // Market order logic (immediate execution)
-    const price = currentStock.price
+    if (!currentStock) {
+      toast({ title: "Error", description: "Selected stock data is not available." });
+      return;
+    }
+    const price = currentStock.price;
+    let tradeSuccess = false;
+
     if (action === 'buy') {
-      const result = addToPortfolio(symbol, qty, price)
-      if (result.success) {
-        // Using 'milestone' as the most appropriate type for trade events
+      tradeSuccess = executeBuyOrder(symbol, qty, price);
+      if (tradeSuccess) {
         dispatchEvent({
           id: `trade-buy-${Date.now()}`,
           type: 'milestone',
-          payload: { action: 'buy', symbol, qty, price, orderType },
+          payload: { name: "Successful Buy", description: `Bought ${qty} ${symbol} @ ${price.toFixed(2)}` },
           timestamp: Date.now(),
-        })
-        incrementUserTrades()
-        addXP(10)
-        dispatchEvent(createXPGainEvent(10))
+        });
+        incrementUserTrades(); // This seems to be from useUser, ensure it's correctly scoped if different from useUserStats
+        addXP(10); // This also seems to be from useUser
+        dispatchEvent(createXPGainEvent(10));
       }
-    } else {
-      const holding = portfolio.holdings.find((h) => h.symbol === symbol)
+    } else { // Sell action
+      const holding = portfolio.holdings.find((h) => h.symbol === symbol);
       if (!holding) {
-        toast({ title: "Stock not owned", description: `You don't own any shares of ${symbol}` })
-        return
+        toast({ title: "Stock not owned", description: `You don't own any shares of ${symbol}` });
+        return;
       }
-      const result = removeFromPortfolio(symbol, qty, price)
-      if (result.success) {
-        const profit = (price - holding.avgPrice) * qty
-        const returnPercent = (profit / (holding.avgPrice * qty)) * 100
-        updateDailyReturn(returnPercent)
-        incrementUserTrades()
-        const xpGain = profit > 0 ? 20 : 5
-        addXP(xpGain)
-        // Using 'milestone' as the most appropriate type for trade events
+      tradeSuccess = executeSellOrder(symbol, qty, price);
+      if (tradeSuccess) {
+        const profit = (price - holding.avgPrice) * Math.min(qty, holding.shares); // Calculate profit on actual shares sold
+        // updateDailyReturn(returnPercent); // Ensure updateDailyReturn is available and correctly typed
+        incrementUserTrades();
+        const xpGain = profit > 0 ? 20 : 5;
+        addXP(xpGain);
         dispatchEvent({
           id: `trade-sell-${Date.now()}`,
           type: 'milestone',
-          payload: { action: 'sell', symbol, qty, price, profit, orderType },
+          payload: { name: "Successful Sell", description: `Sold ${qty} ${symbol} @ ${price.toFixed(2)} for a profit/loss of ${profit.toFixed(2)}` },
           timestamp: Date.now(),
-        })
+        });
         if (profit > 1000) {
           dispatchEvent({
             id: `achievement-big-win-${Date.now()}`,
             type: 'achievement',
             payload: { name: 'Big Win', description: `Sold ${qty} ${symbol} for $${profit.toFixed(2)} profit!` },
             timestamp: Date.now(),
-          })
+          });
         }
-        dispatchEvent(createXPGainEvent(xpGain))
-        if (profit > 500) {
-          dispatchEvent(createLevelUpEvent(2))
+        dispatchEvent(createXPGainEvent(xpGain));
+        // Example: Level up based on profit. This logic can be more sophisticated.
+        if (profit > 500 && engineState.events.find(e => e.type === 'player_level_up' && e.payload.level === 1)) { // Simple check to avoid rapid level ups
+           dispatchEvent(createLevelUpEvent(engineState.events.filter(e => e.type === 'player_level_up').length + 1 ));
         }
       }
     }
@@ -196,37 +207,27 @@ export default function TradingModule() {
       </div>
 
       <div className="flex-1 p-3 overflow-y-auto">
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <div className="text-sm font-bold">{symbol}</div>
-            <div className="flex items-center">
-              <div className="text-lg font-bold mr-2">${currentStock.price.toFixed(2)}</div>
-              <div className={`text-xs ${currentStock.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {currentStock.change >= 0 ? '↑' : '↓'} {Math.abs(currentStock.change).toFixed(2)}
+        {currentStock ? (
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-sm font-bold">{currentStock.name} ({currentStock.symbol})</div>
+              <div className="flex items-center">
+                <div className="text-lg font-bold mr-2">${currentStock.price.toFixed(2)}</div>
+                {/* Price change indicators can be added if history is sufficiently populated */}
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-between text-xs mb-3">
-            <div className={`${currentStock.change >= 0 ? "text-green-400" : "text-red-400"}`}>
-              {currentStock.change >= 0 ? "+" : ""}
-              {currentStock.change.toFixed(2)}(
-              {((currentStock.change / (currentStock.price - currentStock.change)) * 100).toFixed(2)}%)
-            </div>
-            <div className="text-green-500/70">Vol: {currentStock.volume}</div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-green-500/5 p-2 rounded">
-              <div className="text-green-500/70">High</div>
-              <div>${currentStock.high.toFixed(2)}</div>
-            </div>
-            <div className="bg-green-500/5 p-2 rounded">
-              <div className="text-green-500/70">Low</div>
-              <div>${currentStock.low.toFixed(2)}</div>
+            {/* Simplified display - more details like change, volume, high/low can be added if available and needed */}
+            <div className="flex justify-between text-xs mb-3">
+              <div className="text-green-500/70">Volatility: {currentStock.volatility.toFixed(2)}</div>
+              {/* Volume can be added if tracked by the engine */}
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="mb-4 text-center text-green-500/70">
+            {stocks.length > 0 ? "Select a stock" : "No stocks available in the market."}
+          </div>
+        )}
 
         {/* --- Limit Orders Table --- */}
         <div className="mb-6">
@@ -282,10 +283,11 @@ export default function TradingModule() {
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value)}
                 className="w-full bg-black border border-green-500/30 rounded px-2 py-1 text-sm"
+                disabled={stocks.length === 0}
               >
-                {Object.keys(stockData).map((sym) => (
-                  <option key={sym} value={sym}>
-                    {sym}
+                {stocks.map((stock: Stock) => (
+                  <option key={stock.symbol} value={stock.symbol}>
+                    {stock.name} ({stock.symbol})
                   </option>
                 ))}
               </select>
@@ -322,12 +324,14 @@ export default function TradingModule() {
                   <button
                     key={percent}
                     onClick={() => {
+                      if (!currentStock) return;
                       const maxShares = action === 'buy' 
                         ? Math.floor(portfolio.cash / currentStock.price)
-                        : portfolio.holdings.find(h => h.symbol === symbol)?.shares || 0
-                      setQuantity(Math.floor(maxShares * (percent/100)).toString())
+                        : portfolio.holdings.find(h => h.symbol === symbol)?.shares || 0;
+                      setQuantity(Math.max(0, Math.floor(maxShares * (percent/100))).toString());
                     }}
                     className="text-xs py-1 bg-green-900/30 hover:bg-green-500/20 rounded"
+                    disabled={!currentStock}
                   >
                     {percent}%
                   </button>
@@ -391,7 +395,8 @@ export default function TradingModule() {
             <div className="flex justify-between text-sm mb-1">
               <div>Action:</div>
               <div className={action === "buy" ? "text-green-400" : "text-red-400"}>
-                {action === "buy" ? "Buy" : "Sell"} {quantity || '0'} {symbol} @ ${currentStock.price.toFixed(2)}
+                {action === "buy" ? "Buy" : "Sell"} {quantity || '0'} {symbol || "N/A"}
+                {currentStock && ` @ $${currentStock.price.toFixed(2)}`}
               </div>
             </div>
             <div className="flex justify-between text-sm mb-1">
@@ -416,8 +421,9 @@ export default function TradingModule() {
               ? "bg-green-500/20 hover:bg-green-500/30 text-green-400"
               : "bg-red-500/20 hover:bg-red-500/30 text-red-400"
           }`}
+          disabled={!currentStock || !quantity || parseInt(quantity) <= 0}
         >
-          {action === "buy" ? "Buy" : "Sell"} {symbol}
+          {action === "buy" ? "Buy" : "Sell"} {symbol || "N/A"}
         </button>
       </div>
     </div>

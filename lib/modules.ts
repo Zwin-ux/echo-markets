@@ -14,6 +14,7 @@ import {
   Trophy,
   Users,
   Bell,
+  List, // Add List icon
 } from "lucide-react"
 
 export type ModuleDef = {
@@ -35,4 +36,5 @@ export const MODULES: ModuleDef[] = [
   { id: "bookmarks", name: "Bookmarks", icon: Bookmark },
   { id: "social", name: "Social", icon: Users },
   { id: "alerts", name: "Alerts", icon: Bell },
+  { id: "stocklist", name: "Stock List", icon: List },
 ]
