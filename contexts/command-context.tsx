@@ -1,8 +1,10 @@
+"use client"
 // Command context file for managing commands and their execution
 
 // Import necessary dependencies
 import { createContext, useContext, useState, type ReactNode } from "react"
 import { usePortfolio } from "@/contexts/portfolio-context"
+import { useGameEngine } from "@/contexts/game-engine-context"
 import { toast } from "@/hooks/use-toast"
 
 // Define the structure of a command result
@@ -61,15 +63,16 @@ export function CommandProvider({ children }: { children: ReactNode }) {
   const [commandHistory, setCommandHistory] = useState<string[]>([])
   
   // Access portfolio context
-  const { 
-    portfolio, 
-    addToPortfolio, 
-    removeFromPortfolio, 
-    addToWatchlist, 
-    removeFromWatchlist, 
-    addAlert, 
-    removeAlert 
+  const {
+    portfolio,
+    addToPortfolio,
+    removeFromPortfolio,
+    addToWatchlist,
+    removeFromWatchlist,
+    addAlert,
+    removeAlert
   } = usePortfolio()
+  const { state: engineState } = useGameEngine()
   
   // Add command to history
   /**
@@ -472,9 +475,8 @@ export function CommandProvider({ children }: { children: ReactNode }) {
   // Compare command handler
   /**
    * compareCommand handles the 'compare' command.
-   * It compares the performance of two stocks.
-   * TODO: Implement actual data fetching and comparison logic.
-   * NOTE: There are several linting errors related to argument counts in the command handlers. These should be addressed in a future pass.
+   * It compares the current prices of two symbols from the game engine state
+   * and reports which one is performing better.
    */
   const compareCommand = (args: string[]): CommandResult => {
     if (args.length < 2) {
@@ -483,14 +485,26 @@ export function CommandProvider({ children }: { children: ReactNode }) {
         message: "Invalid format. Use 'compare [symbol1] [symbol2]'"
       }
     }
-    
+
     const symbol1 = args[0].toUpperCase()
     const symbol2 = args[1].toUpperCase()
-    
-    // Mock comparison logic
+
+    const stock1 = engineState.stocks.find(s => s.symbol === symbol1)
+    const stock2 = engineState.stocks.find(s => s.symbol === symbol2)
+
+    if (!stock1 || !stock2) {
+      return {
+        success: false,
+        message: `Data not found for ${!stock1 ? symbol1 : ""}${!stock1 && !stock2 ? " and " : ""}${!stock2 ? symbol2 : ""}`
+      }
+    }
+
+    const diffPercent = ((stock1.price - stock2.price) / stock2.price) * 100
+    const outperform = diffPercent >= 0 ? symbol1 : symbol2
+
     return {
       success: true,
-      message: `Comparing ${symbol1} and ${symbol2}...`
+      message: `${symbol1}: $${stock1.price.toFixed(2)} | ${symbol2}: $${stock2.price.toFixed(2)} -> ${outperform} ${diffPercent >= 0 ? "outperforms" : "underperforms"} by ${Math.abs(diffPercent).toFixed(2)}%`
     }
   }
   
