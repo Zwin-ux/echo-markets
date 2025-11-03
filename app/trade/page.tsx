@@ -52,15 +52,37 @@ const INITIAL_STOCKS: Stock[] = [
 ]
 
 export default function TradePage() {
+  // Add debugging to track the issue
+  console.log('TradePage rendering, INITIAL_STOCKS:', INITIAL_STOCKS)
+  
   const [stocks, setStocks] = useState<Stock[]>(() => {
     // Defensive initialization to prevent undefined errors
     try {
+      console.log('Initializing stocks state with:', INITIAL_STOCKS)
       return INITIAL_STOCKS || []
     } catch (error) {
       console.error('Error initializing stocks:', error)
       return []
     }
   })
+  
+  // Add debugging for stocks state
+  console.log('Current stocks state:', stocks)
+
+  // Early return if stocks is not properly initialized
+  if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
+    return (
+      <div className="min-h-screen bg-black text-cyan-400 font-mono flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl mb-4">Loading market data...</div>
+          <div className="text-sm text-gray-400">
+            Initializing trading platform
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const [gameState, setGameState] = useState<GameState>({
     cash: 10000,
     totalValue: 10000,
@@ -297,7 +319,7 @@ export default function TradePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {stocks.map((stock) => (
+                {stocks && Array.isArray(stocks) ? stocks.map((stock) => (
                   <div 
                     key={stock.symbol}
                     className={`p-3 rounded border cursor-pointer transition-all ${
@@ -327,7 +349,11 @@ export default function TradePage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center text-red-400 py-4">
+                    Error: Stocks data not available
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
