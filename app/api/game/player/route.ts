@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     
     // Get player rank from leaderboard
     const leaderboard = await EnhancedDatabaseService.getLeaderboard('total_value')
-    const rank = leaderboard.findIndex(entry => entry.user_id === playerId) + 1
+    const rank = leaderboard.findIndex((entry: any) => entry.user_id === playerId) + 1
 
     const playerData = {
       id: user.id,
@@ -66,7 +66,27 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { username, email } = body
+    const { username, email, action } = body
+
+    // Handle session initialization
+    if (action === 'init') {
+      const playerId = `player-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          playerId,
+          username: 'Anonymous',
+          level: 1,
+          xp: 0,
+          totalValue: 10000,
+          dayChange: 0,
+          rank: 999,
+          achievements: [],
+          streak: 0
+        }
+      })
+    }
 
     if (!username) {
       return NextResponse.json(
@@ -76,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new player
-    const playerId = `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const playerId = `player-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
     
     // This would typically integrate with your auth system
     // For demo purposes, we'll create a simple user record
