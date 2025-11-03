@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, TrendingDown, Activity, Users, Zap, BarChart3 } from "lucide-react"
+import Image from "next/image"
 
 interface MarketData {
   symbol: string
@@ -68,19 +69,26 @@ export default function BetaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-green-400 font-mono">
+    <div className="min-h-screen bg-black text-cyan-400 font-mono">
       {/* Header */}
-      <header className="border-b border-green-500/30 p-4">
+      <header className="border-b border-cyan-500/30 p-4">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold tracking-tighter">
-              <span className="text-green-400">ECHO</span>
-              <span className="text-pink-500">_</span>
-              <span className="text-blue-400">MARKETS</span>
-            </h1>
-            <Badge variant="outline" className="text-yellow-400 border-yellow-400">
-              BETA
-            </Badge>
+            <div className="flex items-center space-x-4">
+              <Image 
+                src="/LATTICE Logo in Neon Turquoise.png" 
+                alt="Lattice" 
+                width={40} 
+                height={40}
+                className="brightness-110"
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-cyan-400">LATTICE</h1>
+                <Badge variant="outline" className="text-cyan-400 border-cyan-400 text-xs">
+                  BETA
+                </Badge>
+              </div>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-sm">
@@ -88,8 +96,8 @@ export default function BetaPage() {
               {activeUsers} traders online
             </div>
             <Button 
-              onClick={() => window.location.href = '/'}
-              className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/50"
+              onClick={() => window.location.href = '/trade'}
+              className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/50"
             >
               START TRADING
             </Button>
@@ -101,22 +109,22 @@ export default function BetaPage() {
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <h2 className="text-4xl font-bold mb-4">
-            The Future of <span className="text-blue-400">Virtual Trading</span>
+            The Future of <span className="text-cyan-400">Virtual Trading</span>
           </h2>
-          <p className="text-xl text-green-300 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl text-cyan-300 mb-8 max-w-3xl mx-auto">
             Experience realistic market simulation powered by advanced algorithms. 
             Trade with $10,000 virtual cash, compete on leaderboards, and master the markets.
           </p>
           
           {/* Live Market Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card className="bg-green-500/10 border-green-500/30">
+            <Card className="bg-cyan-500/10 border-cyan-500/30">
               <CardContent className="p-4 text-center">
-                <Activity className="w-8 h-8 mx-auto mb-2 text-green-400" />
-                <div className="text-2xl font-bold text-green-400">
+                <Activity className="w-8 h-8 mx-auto mb-2 text-cyan-400" />
+                <div className="text-2xl font-bold text-cyan-400">
                   {marketState ? getDramaLabel(marketState.dramaScore) : 'LOADING'}
                 </div>
-                <div className="text-sm text-green-300">Drama Score</div>
+                <div className="text-sm text-cyan-300">Drama Score</div>
               </CardContent>
             </Card>
             
@@ -161,9 +169,9 @@ export default function BetaPage() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {marketData.map((stock) => (
-                <Card key={stock.symbol} className="bg-black/50 border-green-500/30">
+                <Card key={stock.symbol} className="bg-black/50 border-cyan-500/30">
                   <CardContent className="p-4 text-center">
-                    <div className="text-lg font-bold text-green-400 mb-1">
+                    <div className="text-lg font-bold text-cyan-400 mb-1">
                       {stock.symbol}
                     </div>
                     <div className="text-xl font-mono mb-2">
@@ -193,15 +201,15 @@ export default function BetaPage() {
           <h3 className="text-3xl font-bold mb-12 text-center">Beta Features</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="bg-green-500/10 border-green-500/30">
+            <Card className="bg-cyan-500/10 border-cyan-500/30">
               <CardHeader>
-                <CardTitle className="text-green-400">🎯 Realistic Trading</CardTitle>
-                <CardDescription className="text-green-300">
+                <CardTitle className="text-cyan-400">🎯 Realistic Trading</CardTitle>
+                <CardDescription className="text-cyan-300">
                   Advanced market simulation using Geometric Brownian Motion
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm text-green-200 space-y-2">
+                <ul className="text-sm text-cyan-200 space-y-2">
                   <li>• $10,000 starting capital</li>
                   <li>• Real-time price updates</li>
                   <li>• Market & limit orders</li>
@@ -310,8 +318,8 @@ export default function BetaPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg"
-              onClick={() => window.location.href = '/'}
-              className="bg-green-500 hover:bg-green-600 text-black font-bold px-8 py-3"
+              onClick={() => window.location.href = '/trade'}
+              className="bg-cyan-500 hover:bg-cyan-600 text-black font-bold px-8 py-3"
             >
               START TRADING NOW
             </Button>
@@ -319,7 +327,7 @@ export default function BetaPage() {
               size="lg"
               variant="outline"
               onClick={() => window.location.href = '/api/health'}
-              className="border-green-500 text-green-400 hover:bg-green-500/10 px-8 py-3"
+              className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/10 px-8 py-3"
             >
               VIEW SYSTEM STATUS
             </Button>

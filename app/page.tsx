@@ -7,19 +7,17 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirect to beta page for now
-    router.push('/beta')
+    // Redirect to trading game
+    router.push('/trade')
   }, [router])
 
   return (
     <div className="min-h-screen bg-black text-green-400 font-mono flex items-center justify-center">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">
-          <span className="text-green-400">ECHO</span>
-          <span className="text-pink-500">_</span>
-          <span className="text-blue-400">MARKETS</span>
+        <h1 className="text-2xl font-bold mb-4 text-cyan-400">
+          LATTICE
         </h1>
-        <p className="text-green-300">Redirecting to beta...</p>
+        <p className="text-cyan-300">Loading trading platform...</p>
       </div>
     </div>
   )
