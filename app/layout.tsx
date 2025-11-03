@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 }
 
 import { GameEngineProvider } from '@/contexts/game-engine-context'
+import ErrorBoundary from '@/components/error-boundary'
 
 export default function RootLayout({
   children,
@@ -26,29 +27,31 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <GameEngineProvider>
-      <UserStatsProvider>
-        <ModuleProvider>
-          <PortfolioProvider>
-            <MarketPricesProvider>
-              <UserProvider>
-                <html lang="en" className="bg-black text-green-50">
-                  <body className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-gradient-to-b from-black to-green-900/5">
-                    <SessionBootstrap />
-                    <RealtimeBridge />
-                    <CommandProvider>
-                      <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-                        {children}
-                        <ModuleManager />
-                      </main>
-                    </CommandProvider>
-                  </body>
-                </html>
-              </UserProvider>
-            </MarketPricesProvider>
-          </PortfolioProvider>
-        </ModuleProvider>
-      </UserStatsProvider>
-    </GameEngineProvider>
+    <html lang="en" className="bg-black text-green-50">
+      <body className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-gradient-to-b from-black to-green-900/5">
+        <ErrorBoundary>
+          <GameEngineProvider>
+            <UserStatsProvider>
+              <ModuleProvider>
+                <PortfolioProvider>
+                  <MarketPricesProvider>
+                    <UserProvider>
+                      <SessionBootstrap />
+                      <RealtimeBridge />
+                      <CommandProvider>
+                        <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+                          {children}
+                          <ModuleManager />
+                        </main>
+                      </CommandProvider>
+                    </UserProvider>
+                  </MarketPricesProvider>
+                </PortfolioProvider>
+              </ModuleProvider>
+            </UserStatsProvider>
+          </GameEngineProvider>
+        </ErrorBoundary>
+      </body>
+    </html>
   )
 }

@@ -52,7 +52,15 @@ const INITIAL_STOCKS: Stock[] = [
 ]
 
 export default function TradePage() {
-  const [stocks, setStocks] = useState<Stock[]>(INITIAL_STOCKS)
+  const [stocks, setStocks] = useState<Stock[]>(() => {
+    // Defensive initialization to prevent undefined errors
+    try {
+      return INITIAL_STOCKS || []
+    } catch (error) {
+      console.error('Error initializing stocks:', error)
+      return []
+    }
+  })
   const [gameState, setGameState] = useState<GameState>({
     cash: 10000,
     totalValue: 10000,
@@ -76,8 +84,12 @@ export default function TradePage() {
   // Simulate real-time price updates
   useEffect(() => {
     const interval = setInterval(() => {
-      setStocks(prevStocks => 
-        prevStocks.map(stock => {
+      setStocks(prevStocks => {
+        if (!prevStocks || !Array.isArray(prevStocks)) {
+          console.error('Invalid stocks state:', prevStocks)
+          return INITIAL_STOCKS
+        }
+        return prevStocks.map(stock => {
           const volatility = stock.volatility
           const randomChange = (Math.random() - 0.5) * volatility * 10
           const newPrice = Math.max(1, stock.price + randomChange)
@@ -91,7 +103,7 @@ export default function TradePage() {
             changePercent: Math.round(changePercent * 100) / 100
           }
         })
-      )
+      })
       
       // Update drama score
       setDramaScore(prev => Math.max(0, Math.min(100, prev + (Math.random() - 0.5) * 10)))

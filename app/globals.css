@@ -74,11 +74,7 @@ body {
   .shimmer::after { animation: none; }
 }
 
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap");
-  font-display: swap;
-}
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {

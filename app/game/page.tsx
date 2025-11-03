@@ -81,7 +81,15 @@ const INITIAL_STOCKS: Stock[] = [
 ]
 
 export default function GamePage() {
-  const [stocks, setStocks] = useState<Stock[]>(INITIAL_STOCKS)
+  const [stocks, setStocks] = useState<Stock[]>(() => {
+    // Defensive initialization to prevent undefined errors
+    try {
+      return INITIAL_STOCKS || []
+    } catch (error) {
+      console.error('Error initializing stocks:', error)
+      return []
+    }
+  })
   const [player, setPlayer] = useState<Player>({
     id: 'demo-player',
     username: 'TraderPro',
