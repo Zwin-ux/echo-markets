@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "dev:ticker": "node scripts/dev-ticker.mjs",
@@ -25,7 +25,7 @@
     "test:enhanced-db": "node scripts/test-enhanced-db.mjs",
     "deploy:prepare": "npm run db:generate && npm run test:unit && npm run build",
     "setup:beta": "node scripts/setup-beta.mjs",
-    "postinstall": "prisma generate"
+
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
