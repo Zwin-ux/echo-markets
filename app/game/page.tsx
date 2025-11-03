@@ -91,20 +91,6 @@ export default function GamePage() {
     }
   })
 
-  // Early return if stocks is not properly initialized
-  if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
-    return (
-      <div className="min-h-screen bg-black text-cyan-400 font-mono flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl mb-4">Loading game data...</div>
-          <div className="text-sm text-gray-400">
-            Initializing MMO trading platform
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   const [player, setPlayer] = useState<Player>({
     id: 'demo-player',
     username: 'TraderPro',
@@ -127,6 +113,20 @@ export default function GamePage() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [activeTab, setActiveTab] = useState<'trade' | 'portfolio' | 'social' | 'achievements'>('trade')
   const [notifications, setNotifications] = useState<string[]>([])
+
+  // Early return if stocks is not properly initialized (after all hooks)
+  if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
+    return (
+      <div className="min-h-screen bg-black text-cyan-400 font-mono flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl mb-4">Loading game data...</div>
+          <div className="text-sm text-gray-400">
+            Initializing MMO trading platform
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black text-cyan-400 font-mono">
