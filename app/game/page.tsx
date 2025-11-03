@@ -362,9 +362,8 @@ export default function GamePage() {
       </div>
     </div>
   )
-}
   
-// Enhanced real-time price updates with MMO-style volatility
+  // Enhanced real-time price updates with MMO-style volatility
   useEffect(() => {
     const interval = setInterval(() => {
       setStocks(prevStocks => {
@@ -566,4 +565,4 @@ export default function GamePage() {
         ...prev.slice(0, 4)
       ])
     }
-  }
+  }}
