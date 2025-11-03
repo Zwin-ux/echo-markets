@@ -99,10 +99,10 @@ export default function BetaPage() {
               {activeUsers} traders online
             </div>
             <Button 
-              onClick={() => window.location.href = '/trade'}
+              onClick={() => window.location.href = '/game'}
               className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/50"
             >
-              START TRADING
+              ENTER THE GAME
             </Button>
           </div>
         </div>
@@ -320,10 +320,10 @@ export default function BetaPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg"
-              onClick={() => window.location.href = '/trade'}
+              onClick={() => window.location.href = '/game'}
               className="bg-cyan-500 hover:bg-cyan-600 text-black font-bold px-8 py-3"
             >
-              START TRADING NOW
+              ENTER THE GAME
             </Button>
             <Button 
               size="lg"

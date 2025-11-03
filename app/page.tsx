@@ -7,8 +7,8 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirect to trading game
-    router.push('/trade')
+    // Redirect to MMO trading game
+    router.push('/game')
   }, [router])
 
   return (
@@ -17,7 +17,7 @@ export default function Home() {
         <h1 className="text-2xl font-bold mb-4 text-cyan-400">
           LATTICE
         </h1>
-        <p className="text-cyan-300">Loading trading platform...</p>
+        <p className="text-cyan-300">Loading MMO trading platform...</p>
       </div>
     </div>
   )
