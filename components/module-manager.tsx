@@ -13,7 +13,7 @@ export default function ModuleManager() {
     <div className="fixed right-4 bottom-4 z-50">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 bg-green-500/10 hover:bg-green-500/20 rounded-full border border-green-500/30"
+        className="p-2 bg-green-500/10 hover:bg-green-500/20 rounded-full border border-green-500/30 pressable"
       >
         {isOpen ? <X size={18} /> : <LayoutGrid size={18} />}
       </button>
@@ -31,7 +31,7 @@ export default function ModuleManager() {
                   onClick={() => toggleModule(module.id)}
                   aria-pressed={activeModules.includes(module.id)}
                   tabIndex={0}
-                  className={`w-8 h-4 rounded-full relative outline-none focus:ring-2 focus:ring-green-400 ${activeModules.includes(module.id) ? 'bg-green-500' : 'bg-gray-500'}`}
+                  className={`w-8 h-4 rounded-full relative outline-none focus:ring-2 focus:ring-green-400 transition ${activeModules.includes(module.id) ? 'bg-green-500' : 'bg-gray-500'} active:scale-95`}
                 >
                   <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${activeModules.includes(module.id) ? 'left-4' : 'left-0.5'}`}/>
                   <span className="sr-only">{activeModules.includes(module.id) ? 'Hide' : 'Show'} {module.name} module</span>

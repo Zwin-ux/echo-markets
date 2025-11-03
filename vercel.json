@@ -1,0 +1,18 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install --legacy-peer-deps",
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+
+  "crons": [
+    {
+      "path": "/api/cron/session-reset",
+      "schedule": "0 9 * * 1-5"
+    }
+  ]
+}

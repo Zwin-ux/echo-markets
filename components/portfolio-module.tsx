@@ -5,6 +5,7 @@ import { Briefcase, Maximize2, Minimize2, X, RefreshCw, Plus, Trash2, Bell } fro
 import { usePortfolio } from "@/contexts/portfolio-context"
 import type { LimitOrder } from "@/contexts/portfolio-context"
 import { toast } from "@/hooks/use-toast"
+import PortfolioServerPanel from '@/components/portfolio-server-panel'
 import {
   Chart,
   ChartContainer,
@@ -21,6 +22,7 @@ export default function PortfolioModule() {
   const [activeTab, setActiveTab] = useState<"holdings" | "watchlist" | "alerts" | "limitorders">("holdings")
   const [newSymbol, setNewSymbol] = useState("")
   const [newShares, setNewShares] = useState("")
+  const [processing, setProcessing] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const { portfolio, addToPortfolio, removeFromPortfolio, addToWatchlist, removeFromWatchlist } = usePortfolio()
 
@@ -55,13 +57,14 @@ export default function PortfolioModule() {
     // Mock price - in a real app, this would come from an API
     const price = Math.floor(Math.random() * 500) + 50
 
+    setProcessing(true)
     const result = addToPortfolio(symbol, shares, price)
-    
     if (result.success) {
       setNewSymbol("")
       setNewShares("")
       setShowAddForm(false)
     }
+    setTimeout(() => setProcessing(false), 200)
   }
 
   const handleAddToWatchlist = () => {
@@ -76,12 +79,13 @@ export default function PortfolioModule() {
     const price = Math.floor(Math.random() * 500) + 50
     const change = Math.random() * 10 - 5
 
+    setProcessing(true)
     const result = addToWatchlist(symbol, price, change)
-    
     if (result.success) {
       setNewSymbol("")
       setShowAddForm(false)
     }
+    setTimeout(() => setProcessing(false), 200)
   }
 
   const totalValue = portfolio.holdings.reduce((sum, h) => sum + h.shares * h.currentPrice, 0) + portfolio.cash
@@ -94,7 +98,7 @@ export default function PortfolioModule() {
           <span className="text-xs font-semibold">PORTFOLIO_TRACKER</span>
         </div>
         <div className="flex space-x-1">
-          <button className="p-1 hover:bg-green-500/20 rounded">
+          <button className="p-1 hover:bg-green-500/20 rounded disabled:opacity-50" disabled={processing}>
             <RefreshCw size={12} />
           </button>
           <button onClick={() => setIsMaximized(!isMaximized)} className="p-1 hover:bg-green-500/20 rounded">
@@ -173,6 +177,9 @@ export default function PortfolioModule() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
+          {/* Server-backed snapshot */}
+          <PortfolioServerPanel />
+
           {activeTab === "limitorders" && (
             <div className="mb-4">
               <div className="text-xs font-bold mb-2">LIMIT ORDERS</div>
@@ -272,11 +279,9 @@ export default function PortfolioModule() {
                     />
                   </div>
                   <div className="flex space-x-2">
-                    <button
-                      onClick={handleAddToPortfolio}
-                      className="flex-1 bg-green-500/20 hover:bg-green-500/30 rounded py-1 text-xs"
-                    >
-                      Add
+                    <button onClick={handleAddToPortfolio} disabled={processing}
+                      className="flex-1 bg-green-500/20 hover:bg-green-500/30 rounded py-1 text-xs disabled:opacity-50">
+                      {processing ? 'Adding…' : 'Add'}
                     </button>
                     <button
                       onClick={() => setShowAddForm(false)}
@@ -340,11 +345,9 @@ export default function PortfolioModule() {
                     />
                   </div>
                   <div className="flex space-x-2">
-                    <button
-                      onClick={handleAddToWatchlist}
-                      className="flex-1 bg-green-500/20 hover:bg-green-500/30 rounded py-1 text-xs"
-                    >
-                      Add
+                    <button onClick={handleAddToWatchlist} disabled={processing}
+                      className="flex-1 bg-green-500/20 hover:bg-green-500/30 rounded py-1 text-xs disabled:opacity-50">
+                      {processing ? 'Adding…' : 'Add'}
                     </button>
                     <button
                       onClick={() => setShowAddForm(false)}

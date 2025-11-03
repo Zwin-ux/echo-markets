@@ -17,6 +17,8 @@ type LeaderboardEntry = {
   winRate: number
   badges: string[]
 }
+type LBServer = { day: string; players: Array<{ user_id: string; username: string | null; pnl: number; win_rate: number }> }
+import { createClient } from '@supabase/supabase-js'
 
 export default function LeaderboardModule() {
   const { subscribe } = useGameEngine();
@@ -66,8 +68,33 @@ export default function LeaderboardModule() {
 
   if (!isVisible) return null
 
-  // Mock leaderboard data
-  const leaderboardData: LeaderboardEntry[] = [
+  const [serverRows, setServerRows] = useState<LeaderboardEntry[] | null>(null)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/leaderboard?limit=20')
+        const json: LBServer = await res.json()
+        if (res.ok) {
+          // We don't have public usernames via anon RLS; show short user id
+          const mapped: LeaderboardEntry[] = json.players.map((p, i) => ({
+            rank: i + 1,
+            username: p.username || p.user_id.slice(0, 6),
+            avatar: '👤',
+            returns: Number(p.pnl) || 0,
+            trades: 0,
+            winRate: Number(p.win_rate) || 0,
+            badges: [],
+          }))
+          setServerRows(mapped)
+        }
+      } catch {}
+    }
+    load()
+  }, [])
+
+  // Mock fallback (until server returns)
+  const leaderboardData: LeaderboardEntry[] = serverRows ?? [
     {
       rank: 1,
       username: "diamond_hands",

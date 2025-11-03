@@ -1,0 +1,211 @@
+// Echo Markets Prisma Schema
+// Replaces Supabase with PostgreSQL + Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String?
+  username   String?  @unique
+  cash       Float    @default(10000)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  last_active DateTime @default(now())
+  preferences Json    @default("{}")
+  
+  orders   Order[]
+  holdings Holding[]
+  trades_as_buyer  Trade[] @relation("BuyerTrades")
+  trades_as_seller Trade[] @relation("SellerTrades")
+  portfolios Portfolio[]
+  quests Quest[]
+  leaderboard_entries LeaderboardEntry[]
+  
+  @@map("users")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  user_id     String
+  symbol      String
+  side        OrderSide
+  type        OrderType
+  qty         Int
+  limit_price Float?
+  status      OrderStatus @default(OPEN)
+  created_at  DateTime    @default(now())
+  filled_at   DateTime?
+  
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@index([user_id])
+  @@index([symbol])
+  @@index([status])
+  @@map("orders")
+}
+
+model Holding {
+  id       String @id @default(cuid())
+  user_id  String
+  symbol   String
+  qty      Int
+  avg_cost Float
+  
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@unique([user_id, symbol])
+  @@index([user_id])
+  @@map("holdings")
+}
+
+model Tick {
+  id        String   @id @default(cuid())
+  symbol    String
+  price     Float
+  volume    Int      @default(0)
+  bid       Float?
+  ask       Float?
+  change_24h Float?
+  change_percent_24h Float?
+  volatility Float?
+  timestamp DateTime @default(now())
+  
+  @@index([symbol])
+  @@index([timestamp])
+  @@index([symbol, timestamp])
+  @@map("ticks")
+}
+
+model Trade {
+  id         String   @id @default(cuid())
+  symbol     String
+  price      Float
+  qty        Int
+  buyer_id   String
+  seller_id  String
+  timestamp  DateTime @default(now())
+  
+  buyer  User @relation("BuyerTrades", fields: [buyer_id], references: [id])
+  seller User @relation("SellerTrades", fields: [seller_id], references: [id])
+  
+  @@index([symbol])
+  @@index([timestamp])
+  @@map("trades")
+}
+
+model Narrative {
+  id         String   @id @default(cuid())
+  content    String
+  symbol     String?
+  timestamp  DateTime @default(now())
+  
+  @@index([timestamp])
+  @@map("narratives")
+}
+
+model Portfolio {
+  id                  String   @id @default(cuid())
+  user_id             String
+  session_date        DateTime @db.Date
+  starting_cash       Float    @default(10000)
+  current_cash        Float?
+  total_value         Float?
+  day_change          Float?
+  day_change_percent  Float?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+  
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@unique([user_id, session_date])
+  @@index([user_id])
+  @@index([session_date])
+  @@map("portfolios")
+}
+
+model Quest {
+  id               String      @id @default(cuid())
+  user_id          String
+  type             String
+  title            String
+  description      String?
+  target_value     Float?
+  current_progress Float       @default(0)
+  status           QuestStatus @default(ACTIVE)
+  reward_type      String?
+  reward_value     Float?
+  created_at       DateTime    @default(now())
+  expires_at       DateTime?
+  
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@index([user_id])
+  @@index([status])
+  @@index([expires_at])
+  @@map("quests")
+}
+
+model LeaderboardEntry {
+  id           String   @id @default(cuid())
+  user_id      String
+  session_date DateTime @db.Date
+  category     String
+  score        Float
+  rank         Int?
+  metadata     Json     @default("{}")
+  created_at   DateTime @default(now())
+  
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@unique([user_id, session_date, category])
+  @@index([session_date, category])
+  @@index([category, score])
+  @@map("leaderboard_entries")
+}
+
+model MarketEvent {
+  id                String   @id @default(cuid())
+  type              String
+  title             String
+  description       String?
+  affected_symbols  String[]
+  impact_magnitude  Float?
+  sentiment         String?
+  created_at        DateTime @default(now())
+  
+  @@index([type])
+  @@index([created_at])
+  @@map("market_events")
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+}
+
+enum OrderStatus {
+  OPEN
+  FILLED
+  CANCELLED
+}
+
+enum QuestStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}

@@ -1,6 +1,7 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react"
+import { MODULES } from '@/lib/modules'
 
 type ModuleContextType = {
   activeModules: string[]
@@ -12,6 +13,13 @@ const ModuleContext = createContext<ModuleContextType | undefined>(undefined)
 export function ModuleProvider({ children }: { children: ReactNode }) {
   const [activeModules, setActiveModules] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const forceAll = params.get('all') === '1' || params.get('modules') === 'all'
+      if (forceAll) {
+        const all = MODULES.map(m => m.id)
+        localStorage.setItem('activeModules', JSON.stringify(all))
+        return all
+      }
       const saved = localStorage.getItem('activeModules')
       return saved ? JSON.parse(saved) : ['terminal', 'trading', 'portfolio']
     }

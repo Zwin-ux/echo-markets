@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { BarChart3, Maximize2, Minimize2, X, Download, RefreshCw } from "lucide-react"
 import { useModule } from "@/contexts/module-context"
+import { useSSE } from '@/lib/use-sse'
 import {
   Chart,
   ChartContainer,
@@ -19,6 +20,26 @@ export default function ChartModule() {
   const isVisible = activeModules.includes('charts')
   const [isMaximized, setIsMaximized] = useState(false)
   const [chartType, setChartType] = useState<"line" | "bar">("line")
+  const { lastEvent, connected } = useSSE('/api/stream')
+
+  // Compute top movers from SSE snapshot
+  const prevRef = useRef<Map<string, number>>(new Map())
+  const movers = useMemo(() => {
+    const payload = lastEvent as any
+    if (!payload || payload.type !== 'prices') return [] as { symbol: string; price: number; change: number }[]
+    const prev = prevRef.current
+    const out: { symbol: string; price: number; change: number }[] = []
+    for (const item of payload.items as any[]) {
+      const p0 = prev.get(item.symbol)
+      const p1 = Number(item.price)
+      if (p0 && p0 > 0) {
+        const change = ((p1 - p0) / p0) * 100
+        out.push({ symbol: item.symbol, price: p1, change })
+      }
+      prev.set(item.symbol, p1)
+    }
+    return out.sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 5)
+  }, [lastEvent])
 
   if (!isVisible) return null
 
@@ -106,9 +127,27 @@ export default function ChartModule() {
           </ChartContainer>
         </div>
 
-        <div className="mt-2 flex justify-between text-xs text-green-500/70">
-          <div>Source: Echo Markets Data</div>
-          <div>Updated: {new Date().toLocaleDateString()}</div>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="bg-green-500/5 p-2 rounded border border-green-500/20">
+            <div className="text-xs font-bold mb-2">TOP MOVERS {connected ? '' : '(connecting...)'}</div>
+            {movers.length === 0 ? (
+              <div className="text-xs text-green-500/60">Waiting for stream…</div>
+            ) : (
+              <div className="space-y-1 text-xs">
+                {movers.map(m => (
+                  <div key={m.symbol} className="flex justify-between">
+                    <span className="font-mono">{m.symbol}</span>
+                    <span className={m.change >= 0 ? 'text-green-400' : 'text-red-400'}>
+                      {m.change >= 0 ? '+' : ''}{m.change.toFixed(2)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="text-xs text-green-500/70 flex items-end justify-end">
+            <div>Source: Echo Markets Stream • {new Date().toLocaleTimeString()}</div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,13 +1,50 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { MessageSquare, Maximize2, Minimize2, X, RefreshCw, Download } from "lucide-react"
+import supabase from '@/lib/supabase'
 
 export default function NarratorModule() {
   const [isMaximized, setIsMaximized] = useState(false)
+  const [lines, setLines] = useState<{ id: string | number; text: string; created_at: string }[]>([])
+  const [loading, setLoading] = useState(false)
+
+  async function load() {
+    try {
+      setLoading(true)
+      const { data: session } = await supabase.auth.getSession()
+      const token = session.session?.access_token
+      const res = await fetch('/api/narrator?limit=50', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      const json = await res.json()
+      if (res.ok && json?.narratives) setLines(json.narratives)
+    } finally {
+      setLoading(false)
+    }
+  }
+  useEffect(() => { load() }, [])
+
+  // Realtime: append new narrative lines as they are inserted
+  useEffect(() => {
+    const ch = supabase
+      .channel('narratives_changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'narratives' }, (payload: any) => {
+        const r = payload.new
+        setLines((prev) => [{ id: r.id, text: r.text, created_at: r.created_at }, ...prev])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'narratives' }, (payload: any) => {
+        const r = payload.new
+        setLines(prev => prev.map(l => (l.id === r.id ? { id: r.id, text: r.text, created_at: r.created_at } : l)))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'narratives' }, (payload: any) => {
+        const r = payload.old
+        setLines(prev => prev.filter(l => l.id !== r.id))
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [])
 
   const handleDownload = () => {
-    const content = document.querySelector('.narrator-content')?.textContent || ''
+    const content = lines.map(l => `- ${new Date(l.created_at).toLocaleString()} — ${l.text}`).join('\n')
     const blob = new Blob([content], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -24,7 +61,7 @@ export default function NarratorModule() {
           <span className="text-xs font-semibold">MARKET_NARRATOR</span>
         </div>
         <div className="flex space-x-1">
-          <button className="p-1 hover:bg-green-500/20 rounded">
+          <button onClick={load} className="p-1 hover:bg-green-500/20 rounded">
             <RefreshCw size={12} />
           </button>
           <button onClick={handleDownload} className="p-1 hover:bg-green-500/20 rounded">
@@ -40,30 +77,13 @@ export default function NarratorModule() {
       </div>
 
       <div className="flex-1 p-3 overflow-y-auto narrator-content">
-        <div className="mb-4">
-          <div className="text-xs font-bold mb-1 text-blue-400">MARKET STORY</div>
-          <div className="text-sm bg-green-500/5 p-2 rounded border border-green-500/20">
-            S&P 500 just hit a 3-month high while tech stocks are having their moment. The Fed is basically your rich
-            friend who keeps bailing you out, but the party might end soon. Inflation's cooling but still spicy. Vibes
-            are cautiously optimistic.
+        {loading && <div className="text-xs text-green-500/60">Loading…</div>}
+        {lines.map((l) => (
+          <div key={l.id} className="mb-2">
+            <div className="text-xs text-green-500/60">{new Date(l.created_at).toLocaleString()}</div>
+            <div className="text-sm bg-green-500/5 p-2 rounded border border-green-500/20">{l.text}</div>
           </div>
-        </div>
-
-        <div className="mb-4">
-          <div className="text-xs font-bold mb-1 text-pink-500">DRAMA ALERT</div>
-          <div className="text-sm bg-pink-500/5 p-2 rounded border border-pink-500/20">
-            Tech CEOs are fighting on social media again while their stocks are mooning. Classic correlation between CEO
-            Twitter drama and market gains continues to hold.
-          </div>
-        </div>
-
-        <div>
-          <div className="text-xs font-bold mb-1 text-yellow-400">WHAT TO WATCH</div>
-          <div className="text-sm bg-yellow-500/5 p-2 rounded border border-yellow-500/20">
-            Keep an eye on tomorrow's jobs report. If it slaps, markets could pop off. If it flops, expect the Fed to
-            enter damage control mode. Either way, volatility incoming.
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   )

@@ -9,6 +9,9 @@ import { useUserStats } from '@/contexts/user-stats-context'
 import { useModule } from '@/contexts/module-context'
 import { useGameEngine, createLevelUpEvent, createXPGainEvent } from '@/contexts/game-engine-context'
 import { toast } from '@/hooks/use-toast'
+import { useMarketPrices } from '@/contexts/market-prices-context'
+import supabase from '@/lib/supabase'
+import { subscribeOrders } from '@/lib/db'
 
 export default function TradingModule() {
   const { dispatchEvent, subscribe } = useGameEngine();
@@ -19,6 +22,10 @@ export default function TradingModule() {
   const [limitPrice, setLimitPrice] = useState("")
   const [action, setAction] = useState<"buy" | "sell">("buy")
   const [estimatedValue, setEstimatedValue] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
+  const [recentOrders, setRecentOrders] = useState<any[]>([])
+  const [flashMap, setFlashMap] = useState<Record<string, boolean>>({})
+  const [ctaPulse, setCtaPulse] = useState(false)
   const { portfolio, addToPortfolio, removeFromPortfolio, placeLimitOrder, cancelLimitOrder, processLimitOrders } = usePortfolio()
   const { incrementTrades, addXP } = useUser()
   const { updateDailyReturn, incrementTrades: incrementUserTrades } = useUserStats()
@@ -35,11 +42,13 @@ export default function TradingModule() {
     GOOGL: { price: 142.56, change: 0.87, volume: "18.9M", high: 143.21, low: 141.78, avgPrice: 142.0 },
   }
 
+  const { prices } = useMarketPrices()
   const currentStock = stockData[symbol as keyof typeof stockData] || stockData.AAPL
+  const livePrice = prices[symbol] ?? currentStock.price
 
   useEffect(() => {
     const qty = Number.parseInt(quantity) || 0
-    const price = currentStock.price
+    const price = livePrice
     const holding = portfolio.holdings.find(h => h.symbol === symbol)
     
     setEstimatedValue(
@@ -48,14 +57,14 @@ export default function TradingModule() {
         : holding ? Math.min(qty, holding.shares) * price 
         : 0
     )
-  }, [quantity, action, symbol, currentStock.price, portfolio])
+  }, [quantity, action, symbol, livePrice, portfolio])
 
   // --- Limit Order Processing ---
-  // Mock price update: call processLimitOrders whenever currentStock.price changes
+  // Mock price update: call processLimitOrders whenever price changes (reused for UI feedback)
   useEffect(() => {
-    processLimitOrders({ [symbol]: currentStock.price })
+    processLimitOrders({ [symbol]: livePrice })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStock.price])
+  }, [livePrice])
 
   // Listen for game events and show toast notifications
   useEffect(() => {
@@ -89,6 +98,25 @@ export default function TradingModule() {
     return () => unsubscribe()
   }, [subscribe])
 
+  // Realtime: subscribe to orders table and show status inline
+  useEffect(() => {
+    const unsubscribe = subscribeOrders((payload: any) => {
+      const row = payload?.new || payload?.old
+      if (!row) return
+      setRecentOrders((prev) => {
+        const next = [row, ...prev.filter(r => r.id !== row.id)].slice(0, 10)
+        return next
+      })
+      const eventType = (payload?.eventType || payload?.type || '').toString().toUpperCase()
+      if (eventType === 'UPDATE' && payload?.new?.status === 'filled') {
+        const id = payload.new.id
+        setFlashMap((m) => ({ ...m, [id]: true }))
+        setTimeout(() => setFlashMap((m) => ({ ...m, [id]: false })), 700)
+      }
+    })
+    return () => unsubscribe()
+  }, [])
+
   if (!isVisible) return null
 
   /**
@@ -97,33 +125,60 @@ export default function TradingModule() {
    * - Limit orders are stubbed for future implementation
    */
   // Handles trade execution for both market and limit orders
-  const handleTrade = () => {
-    const qty = Number.parseInt(quantity)
+  const handleTrade = async () => {
+    const qty = Number.parseFloat(quantity)
     if (isNaN(qty) || qty <= 0) {
       toast({ title: "Invalid quantity", description: "Please enter a valid positive number of shares" })
       return
     }
-    if (orderType === 'limit') {
-      const limitPriceNum = Number.parseFloat(limitPrice)
-      if (isNaN(limitPriceNum) || limitPriceNum <= 0) {
-        toast({ title: "Invalid limit price", description: "Please enter a valid limit price" })
-        return
-      }
-      // Place a limit order
-      const result = placeLimitOrder({
-        symbol,
-        qty,
-        limitPrice: limitPriceNum,
-        action,
-      })
-      if (result.success) {
-        setQuantity("10")
-        setLimitPrice("")
-      }
+    const limitPriceNum = orderType === 'limit' ? Number.parseFloat(limitPrice) : undefined
+    if (orderType === 'limit' && (isNaN(limitPriceNum as number) || (limitPriceNum as number) <= 0)) {
+      toast({ title: "Invalid limit price", description: "Please enter a valid limit price" })
       return
     }
-    // Market order logic (immediate execution)
-    const price = currentStock.price
+
+    // Server-side order placement via API
+    try {
+      setSubmitting(true)
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) {
+        toast({ title: 'Not signed in', description: 'Session missing. Refresh and try again.' })
+        setSubmitting(false)
+        return
+      }
+      const res = await fetch('/api/trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ symbol, side: action, type: orderType, qty, limit_price: limitPriceNum })
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload?.success) throw new Error(payload?.error || 'Trade failed')
+      toast({ title: 'Order placed', description: `${orderType.toUpperCase()} ${action.toUpperCase()} ${qty} ${symbol}` })
+      // Auto bracket: if market buy and enabled, place TP limit sell
+      if (orderType === 'market' && action === 'buy' && useBracket) {
+        const tp = computeTakeProfitPrice(livePrice, Number.parseFloat(tpPct) || 2)
+        const res2 = await fetch('/api/trade', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ symbol, side: 'sell', type: 'limit', qty, limit_price: tp })
+        })
+        const payload2 = await res2.json()
+        if (!res2.ok || !payload2?.success) throw new Error(payload2?.error || 'Bracket TP failed')
+        toast({ title: 'Auto take-profit placed', description: `SELL ${qty} ${symbol} @ $${tp.toFixed(2)}` })
+      }
+      setCtaPulse(true)
+      setTimeout(() => setCtaPulse(false), 500)
+      setQuantity('10')
+      if (orderType === 'limit') setLimitPrice('')
+    } catch (e: any) {
+      toast({ title: 'Order failed', description: e?.message || 'Unable to place order' })
+    } finally {
+      setSubmitting(false)
+    }
+
+    // Local UX feedback for market orders (client-sim)
+    const price = livePrice
     if (action === 'buy') {
       const result = addToPortfolio(symbol, qty, price)
       if (result.success) {
@@ -200,7 +255,7 @@ export default function TradingModule() {
           <div className="flex justify-between items-center mb-2">
             <div className="text-sm font-bold">{symbol}</div>
             <div className="flex items-center">
-              <div className="text-lg font-bold mr-2">${currentStock.price.toFixed(2)}</div>
+              <div className="text-lg font-bold mr-2 animate-pulse">${livePrice.toFixed(2)}</div>
               <div className={`text-xs ${currentStock.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {currentStock.change >= 0 ? '↑' : '↓'} {Math.abs(currentStock.change).toFixed(2)}
               </div>
@@ -211,7 +266,7 @@ export default function TradingModule() {
             <div className={`${currentStock.change >= 0 ? "text-green-400" : "text-red-400"}`}>
               {currentStock.change >= 0 ? "+" : ""}
               {currentStock.change.toFixed(2)}(
-              {((currentStock.change / (currentStock.price - currentStock.change)) * 100).toFixed(2)}%)
+              {((currentStock.change / (livePrice - currentStock.change)) * 100).toFixed(2)}%)
             </div>
             <div className="text-green-500/70">Vol: {currentStock.volume}</div>
           </div>
@@ -322,10 +377,11 @@ export default function TradingModule() {
                   <button
                     key={percent}
                     onClick={() => {
-                      const maxShares = action === 'buy' 
-                        ? Math.floor(portfolio.cash / currentStock.price)
-                        : portfolio.holdings.find(h => h.symbol === symbol)?.shares || 0
-                      setQuantity(Math.floor(maxShares * (percent/100)).toString())
+                      const maxShares = action === 'buy'
+                        ? (portfolio.cash / (livePrice || 1))
+                        : (portfolio.holdings.find(h => h.symbol === symbol)?.shares || 0)
+                      const q = Math.max(0.01, Math.round((maxShares * (percent/100)) * 100) / 100)
+                      setQuantity(q.toString())
                     }}
                     className="text-xs py-1 bg-green-900/30 hover:bg-green-500/20 rounded"
                   >
@@ -338,12 +394,13 @@ export default function TradingModule() {
                 value={quantity}
                 onChange={(e) => {
                   const value = e.target.value
-                  if (value === '' || /^\d+$/.test(value)) {
+                  if (value === '' || /^\d+(\.\d{0,2})?$/.test(value)) {
                     setQuantity(value)
                   }
                 }}
                 className="w-full bg-black border border-green-500/30 rounded px-2 py-1 text-sm"
-                min="1"
+                min="0.01"
+                step="0.01"
               />
             </div>
 
@@ -382,6 +439,16 @@ export default function TradingModule() {
                 />
               </div>
             )}
+
+            {orderType === 'market' && action === 'buy' && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-green-500/70">Auto take‑profit</label>
+                <input type="checkbox" checked={useBracket} onChange={(e) => setUseBracket(e.target.checked)} />
+                <input type="number" value={tpPct} onChange={(e) => setTpPct(e.target.value)} min="0.5" step="0.5" className="w-16 bg-black border border-green-500/30 rounded px-2 py-1 text-xs" />
+                <span className="text-xs text-green-500/70">%</span>
+                {useBracket && <span className="text-xs text-green-500/70">→ ${computeTakeProfitPrice(livePrice, Number.parseFloat(tpPct) || 2).toFixed(2)}</span>}
+              </div>
+            )}
           </div>
         </div>
 
@@ -391,7 +458,7 @@ export default function TradingModule() {
             <div className="flex justify-between text-sm mb-1">
               <div>Action:</div>
               <div className={action === "buy" ? "text-green-400" : "text-red-400"}>
-                {action === "buy" ? "Buy" : "Sell"} {quantity || '0'} {symbol} @ ${currentStock.price.toFixed(2)}
+                {action === "buy" ? "Buy" : "Sell"} {quantity || '0'} {symbol} @ ${livePrice.toFixed(2)}
               </div>
             </div>
             <div className="flex justify-between text-sm mb-1">
@@ -411,14 +478,49 @@ export default function TradingModule() {
 
         <button
           onClick={handleTrade}
-          className={`w-full py-2 rounded text-sm font-bold ${
-            action === "buy"
-              ? "bg-green-500/20 hover:bg-green-500/30 text-green-400"
-              : "bg-red-500/20 hover:bg-red-500/30 text-red-400"
-          }`}
+          disabled={submitting}
+          className={`btn-hud w-full ${ctaPulse ? 'ring-2 ring-green-400' : ''} ${action === 'buy' ? 'buy' : 'sell'}`}
         >
-          {action === "buy" ? "Buy" : "Sell"} {symbol}
+          {submitting ? 'Placing…' : `${action === 'buy' ? 'Buy' : 'Sell'} ${symbol}`}
         </button>
+
+        {/* Recent orders status */}
+        <div className="mt-3">
+          <div className="text-xs font-bold mb-2">RECENT ORDERS</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border border-green-500/20 bg-black rounded">
+              <thead className="bg-green-900/10">
+                <tr>
+                  <th className="p-2">Symbol</th>
+                  <th className="p-2">Side</th>
+                  <th className="p-2">Type</th>
+                  <th className="p-2">Qty</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.length === 0 && (
+                  <tr><td colSpan={6} className="text-center p-2 text-green-500/50">No recent orders</td></tr>
+                )}
+                {recentOrders.map((o) => (
+                  <tr key={o.id} className={flashMap[o.id] ? 'bg-green-900/30 transition-colors' : ''}>
+                    <td className="p-2 font-mono">{o.symbol}</td>
+                    <td className="p-2 capitalize">{o.side}</td>
+                    <td className="p-2 capitalize">{o.order_type || o.type}</td>
+                    <td className="p-2">{Number(o.qty)}</td>
+                    <td className="p-2 capitalize">
+                      <span className={o.status === 'open' ? 'text-yellow-400' : o.status === 'filled' ? 'text-green-400' : 'text-red-400'}>
+                        {o.status}
+                      </span>
+                    </td>
+                    <td className="p-2">{new Date(o.created_at || Date.now()).toLocaleTimeString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   )

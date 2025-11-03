@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { getStartingCash } from '@/lib/config'
 import { Button } from '@/components/ui/button'
 import { Tutorial } from '@/components/onboarding/tutorial'
 import { useState, useEffect } from 'react'
@@ -42,7 +43,7 @@ export default function OnboardingPage() {
             <div className="bg-green-900/20 p-4 rounded-lg border border-green-500/30">
               <h3 className="font-semibold text-green-300 mb-2">How It Works</h3>
               <ul className="text-left text-green-100 space-y-2 text-sm">
-                <li>• Start with $100 every day</li>
+                <li>• Start with ${getStartingCash()} every day</li>
                 <li>• Trade simulated stocks</li>
                 <li>• Track your performance</li>
                 <li>• Compete on the leaderboard</li>

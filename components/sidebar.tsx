@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useModule } from "@/contexts/module-context"
-import { MODULES, ModuleDef } from "@/lib/modules"
+import { MODULES } from "@/lib/modules"
 import {
   Settings,
   HelpCircle
@@ -12,14 +12,13 @@ export default function Sidebar() {
   const [expanded, setExpanded] = useState(true)
   const { activeModules, toggleModule } = useModule()
 
-  // Import the shared module list
-  import { MODULES } from "@/lib/modules";
+  // MODULES imported at top-level
 
   return (
     <div className={`${expanded ? "w-48" : "w-12"} border-r border-green-500/30 bg-black transition-all duration-200`}>
       <div className="p-2 border-b border-green-500/30 flex justify-between items-center">
         {expanded && <span className="text-xs font-semibold">MODULES</span>}
-        <button onClick={() => setExpanded(!expanded)} className="p-1 hover:bg-green-500/20 rounded">
+        <button onClick={() => setExpanded(!expanded)} className="p-1 hover:bg-green-500/20 rounded pressable">
           {expanded ? "«" : "»"}
         </button>
       </div>
@@ -31,7 +30,7 @@ export default function Sidebar() {
             onClick={() => toggleModule(module.id)}
             aria-pressed={activeModules.includes(module.id)}
             tabIndex={0}
-            className={`w-full text-left p-2 flex items-center transition-colors duration-100 outline-none focus:ring-2 focus:ring-green-400 ${
+            className={`w-full text-left p-2 flex items-center transition-colors duration-100 outline-none focus:ring-2 focus:ring-green-400 pressable ${
               activeModules.includes(module.id)
                 ? "bg-green-500/20 text-green-400"
                 : "text-green-500/70 hover:bg-green-500/10"

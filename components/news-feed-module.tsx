@@ -2,119 +2,53 @@
 
 import { useState, useEffect } from "react"
 import { Newspaper, Maximize2, Minimize2, X, RefreshCw, Filter, ThumbsUp, ThumbsDown } from "lucide-react"
+import supabase from '@/lib/supabase'
+import { useSSE } from '@/lib/use-sse'
 
-type NewsItem = {
-  id: number
-  title: string
-  source: string
-  time: string
-  sentiment: "positive" | "negative" | "neutral"
-  category: "stocks" | "crypto" | "economy" | "tech"
-  liked?: boolean
-  disliked?: boolean
-}
+type FeedItem =
+  | { type: 'trade'; id: string; ts: string; symbol: string; price: number; qty: number; buy_username: string | null; sell_username: string | null }
+  | { type: 'event'; id: string; ts: string; symbol: string | null; headline: string; impact_type: 'PUMP'|'DUMP'|'PANIC'|'HYPE'; magnitude: number }
 
 export default function NewsFeedModule() {
   const [isMaximized, setIsMaximized] = useState(false)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
-  const [news, setNews] = useState<NewsItem[]>([])
+  const [items, setItems] = useState<FeedItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const { lastEvent } = useSSE('/api/feed/stream')
 
-  // Mock news data
+  async function loadFeed() {
+    try {
+      setLoading(true)
+      const { data: session } = await supabase.auth.getSession()
+      const token = session.session?.access_token
+      const res = await fetch('/api/feed?limit=100', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      const json = await res.json()
+      if (res.ok && json?.items) setItems(json.items)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { loadFeed() }, [])
+
+  // Realtime: subscribe to new events and trades
+  // Moved fully to enriched SSE; DB channel subscription removed to avoid duplicate rows
+
+  // Merge enriched items from server relay SSE
   useEffect(() => {
-    const mockNews: NewsItem[] = [
-      {
-        id: 1,
-        title: "Fed signals potential rate cuts later this year",
-        source: "Financial Times",
-        time: "2h ago",
-        sentiment: "positive",
-        category: "economy",
-      },
-      {
-        id: 2,
-        title: "Tech stocks rally as AI optimism continues",
-        source: "Wall Street Journal",
-        time: "3h ago",
-        sentiment: "positive",
-        category: "stocks",
-      },
-      {
-        id: 3,
-        title: "Bitcoin drops below $40k as regulatory concerns mount",
-        source: "CoinDesk",
-        time: "5h ago",
-        sentiment: "negative",
-        category: "crypto",
-      },
-      {
-        id: 4,
-        title: "Inflation data comes in cooler than expected",
-        source: "Bloomberg",
-        time: "6h ago",
-        sentiment: "positive",
-        category: "economy",
-      },
-      {
-        id: 5,
-        title: "New AI chip shortage could impact tech sector",
-        source: "TechCrunch",
-        time: "8h ago",
-        sentiment: "negative",
-        category: "tech",
-      },
-      {
-        id: 6,
-        title: "Retail sales disappoint, consumer spending slows",
-        source: "CNBC",
-        time: "10h ago",
-        sentiment: "negative",
-        category: "economy",
-      },
-      {
-        id: 7,
-        title: "Ethereum upgrade date confirmed, gas fees expected to drop",
-        source: "The Block",
-        time: "12h ago",
-        sentiment: "positive",
-        category: "crypto",
-      },
-    ]
+    if (!lastEvent) return
+    // lastEvent may carry various event types; we only care about trade/event
+    const anyEvt: any = lastEvent
+    if (anyEvt?.type === 'trade' || anyEvt?.type === 'event') {
+      setItems(prev => [anyEvt as FeedItem, ...prev].slice(0, 200))
+    }
+  }, [lastEvent])
 
-    setNews(mockNews)
-  }, [])
+  const filtered = items
 
-  const filteredNews = activeFilter ? news.filter((item) => item.category === activeFilter) : news
-
-  const handleLike = (id: number) => {
-    setNews((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            liked: !item.liked,
-            disliked: false,
-          }
-        }
-        return item
-      }),
-    )
-  }
-
-  const handleDislike = (id: number) => {
-    setNews((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            disliked: !item.disliked,
-            liked: false,
-          }
-        }
-        return item
-      }),
-    )
-  }
+  const handleLike = (_id: string) => {}
+  const handleDislike = (_id: string) => {}
 
   return (
     <div className={`flex flex-col bg-black border border-green-500/30 rounded-sm overflow-hidden`}>
@@ -189,45 +123,34 @@ export default function NewsFeedModule() {
       )}
 
       <div className="flex-1 overflow-y-auto">
-        {filteredNews.length === 0 ? (
+        {loading && <div className="text-xs text-center py-3 text-green-500/60">Loading…</div>}
+        {filtered.length === 0 ? (
           <div className="text-xs text-center py-4 text-green-500/50">No news matching your filter.</div>
         ) : (
           <div className="divide-y divide-green-500/20">
-            {filteredNews.map((item) => (
-              <div key={item.id} className="p-3 hover:bg-green-500/5">
-                <div className="flex justify-between items-start mb-1">
-                  <div className="text-sm font-bold">{item.title}</div>
-                  <div
-                    className={`text-xs px-1.5 py-0.5 rounded ${
-                      item.sentiment === "positive"
-                        ? "bg-green-500/20 text-green-400"
-                        : item.sentiment === "negative"
-                          ? "bg-red-500/20 text-red-400"
-                          : "bg-blue-500/20 text-blue-400"
-                    }`}
-                  >
-                    {item.sentiment === "positive" ? "Bullish" : item.sentiment === "negative" ? "Bearish" : "Neutral"}
+            {filtered.map((it) => (
+              <div key={it.id} className="p-3 hover:bg-green-500/5">
+                {it.type === 'event' ? (
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-sm font-bold">{it.headline}</div>
+                      <div className="text-xs text-green-500/70">{it.symbol ? `$${it.symbol}` : 'MARKET'} • {new Date(it.ts).toLocaleTimeString()}</div>
+                    </div>
+                    <div className={`text-xs px-1.5 py-0.5 rounded ${it.impact_type === 'PUMP' || it.impact_type === 'HYPE' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                      {it.impact_type}
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="text-xs text-green-500/70">
-                    {item.source} • {item.time}
+                ) : (
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-sm font-bold">
+                        {(it.buy_username || 'buyer')} → {(it.sell_username || 'seller')} • {it.qty} ${it.symbol} @ ${it.price.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-green-500/70">{new Date(it.ts).toLocaleTimeString()}</div>
+                    </div>
+                    <div className="text-xs bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded">TRADE</div>
                   </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleLike(item.id)}
-                      className={`p-1 rounded ${item.liked ? "bg-green-500/30" : "hover:bg-green-500/10"}`}
-                    >
-                      <ThumbsUp size={12} />
-                    </button>
-                    <button
-                      onClick={() => handleDislike(item.id)}
-                      className={`p-1 rounded ${item.disliked ? "bg-red-500/30" : "hover:bg-red-500/10"}`}
-                    >
-                      <ThumbsDown size={12} />
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
             ))}
           </div>
