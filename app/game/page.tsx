@@ -90,6 +90,21 @@ export default function GamePage() {
       return []
     }
   })
+
+  // Early return if stocks is not properly initialized
+  if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
+    return (
+      <div className="min-h-screen bg-black text-cyan-400 font-mono flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl mb-4">Loading game data...</div>
+          <div className="text-sm text-gray-400">
+            Initializing MMO trading platform
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const [player, setPlayer] = useState<Player>({
     id: 'demo-player',
     username: 'TraderPro',
@@ -211,7 +226,7 @@ export default function GamePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {stocks.map((stock) => (
+                    {stocks && Array.isArray(stocks) ? stocks.map((stock) => (
                       <div 
                         key={stock.symbol}
                         className={`p-4 rounded-lg border cursor-pointer transition-all hover:scale-105 ${
@@ -260,7 +275,11 @@ export default function GamePage() {
                           </span>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <div className="col-span-2 text-center text-red-400 py-8">
+                        Error: Market data not available
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -348,8 +367,13 @@ export default function GamePage() {
 // Enhanced real-time price updates with MMO-style volatility
   useEffect(() => {
     const interval = setInterval(() => {
-      setStocks(prevStocks => 
-        prevStocks.map(stock => {
+      setStocks(prevStocks => {
+        if (!prevStocks || !Array.isArray(prevStocks)) {
+          console.error('Invalid stocks state in game page:', prevStocks)
+          return INITIAL_STOCKS
+        }
+        
+        const updatedStocks = prevStocks.map(stock => {
           // More dramatic price movements for engaging gameplay
           const baseVolatility = stock.volatility
           const momentumBoost = Math.abs(stock.momentum) * 0.5
@@ -376,13 +400,15 @@ export default function GamePage() {
             volume: stock.volume + Math.floor(Math.random() * 1000000)
           }
         })
-      )
-      
-      // More dynamic drama score
-      setDramaScore(prev => {
-        const volatilityBoost = stocks.reduce((sum, stock) => sum + Math.abs(stock.changePercent), 0) / stocks.length
-        const newScore = prev + (Math.random() - 0.4) * 15 + volatilityBoost
-        return Math.max(0, Math.min(100, newScore))
+        
+        // Update drama score using the updated stocks data
+        setDramaScore(prev => {
+          const volatilityBoost = updatedStocks.reduce((sum, stock) => sum + Math.abs(stock.changePercent), 0) / updatedStocks.length
+          const newScore = prev + (Math.random() - 0.4) * 15 + volatilityBoost
+          return Math.max(0, Math.min(100, newScore))
+        })
+        
+        return updatedStocks
       })
       
       // More frequent and impactful market events
@@ -403,7 +429,7 @@ export default function GamePage() {
           title: event.text,
           description: "Market conditions are rapidly changing",
           impact: Math.random() * 0.1 + 0.05,
-          affectedStocks: stocks.slice(0, Math.floor(Math.random() * 3) + 1).map(s => s.symbol),
+          affectedStocks: updatedStocks.slice(0, Math.floor(Math.random() * 3) + 1).map(s => s.symbol),
           timestamp: new Date(),
           severity: event.severity as any
         }
@@ -416,7 +442,7 @@ export default function GamePage() {
     }, 1500) // Faster updates for more excitement
 
     return () => clearInterval(interval)
-  }, [stocks])
+  }, [])
 
   // Load leaderboard data
   useEffect(() => {
