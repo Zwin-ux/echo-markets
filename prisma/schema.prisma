@@ -13,14 +13,30 @@ datasource db {
 
 model User {
   id         String   @id @default(cuid())
-  email      String   @unique
+  email      String?  @unique
+  password_hash String?
   name       String?
-  username   String?  @unique
+  username   String   @unique
+  display_name String?
+  avatar_url String?
+  bio        String?
+  is_guest   Boolean  @default(false)
   cash       Float    @default(10000)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   last_active DateTime @default(now())
   preferences Json    @default("{}")
+  
+  // Social Stats
+  followers_count Int @default(0)
+  following_count Int @default(0)
+  total_score     Int @default(0)
+  rank_tier       String @default("bronze")
+  
+  // Privacy Settings
+  profile_public    Boolean @default(true)
+  trades_public     Boolean @default(true)
+  allow_copy_trading Boolean @default(false)
   
   orders   Order[]
   holdings Holding[]
@@ -29,6 +45,9 @@ model User {
   portfolios Portfolio[]
   quests Quest[]
   leaderboard_entries LeaderboardEntry[]
+  followers UserFollow[] @relation("UserFollowers")
+  following UserFollow[] @relation("UserFollowing")
+  sessions UserSession[]
   
   @@map("users")
 }
@@ -208,4 +227,34 @@ enum QuestStatus {
   COMPLETED
   EXPIRED
   CANCELLED
+}
+model UserFollow {
+  id           String   @id @default(cuid())
+  follower_id  String
+  following_id String
+  created_at   DateTime @default(now())
+  notifications_enabled Boolean @default(true)
+  
+  follower  User @relation("UserFollowers", fields: [follower_id], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowing", fields: [following_id], references: [id], onDelete: Cascade)
+  
+  @@unique([follower_id, following_id])
+  @@index([follower_id])
+  @@index([following_id])
+  @@map("user_follows")
+}
+
+model UserSession {
+  id         String   @id @default(cuid())
+  user_id    String
+  session_token String @unique
+  expires_at DateTime
+  created_at DateTime @default(now())
+  
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@index([user_id])
+  @@index([session_token])
+  @@index([expires_at])
+  @@map("user_sessions")
 }

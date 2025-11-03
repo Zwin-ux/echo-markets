@@ -234,19 +234,130 @@ interface Quest {
 }
 ```
 
+### 6. Copy Trading Engine
+
+**Purpose:** Automated position replication for social trading
+
+**Key Features:**
+- Real-time trade copying
+- Proportional position sizing
+- Risk management controls
+- Performance tracking
+
+**Interface:**
+```typescript
+interface CopyTradingEngine {
+  enableCopyTrading(copierId: string, traderId: string, allocation: number): Promise<void>
+  executeCopyTrade(originalTrade: TradeOrder): Promise<CopyTradeResult[]>
+  getCopyTradingStats(userId: string): Promise<CopyTradingStats>
+  getTopTradersToFollow(): Promise<TraderProfile[]>
+}
+
+interface CopyTradeResult {
+  copierId: string
+  originalTradeId: string
+  copyTradeId: string
+  allocationPercentage: number
+  executedQuantity: number
+  status: 'executed' | 'failed' | 'insufficient_funds'
+}
+
+interface TraderProfile {
+  userId: string
+  username: string
+  totalFollowers: number
+  winRate: number
+  avgReturn: number
+  riskScore: number
+  recentTrades: TradeHistory[]
+}
+```
+
+### 7. Arcade Interface System
+
+**Purpose:** Gaming-style UI with animations and visual effects
+
+**Key Features:**
+- Neon cyberpunk theme
+- Achievement celebrations
+- Sound effects
+- Animated counters
+
+**Interface:**
+```typescript
+interface ArcadeInterface {
+  triggerAchievementCelebration(achievement: Achievement): Promise<void>
+  playTradeSound(tradeType: 'buy' | 'sell', profit: number): Promise<void>
+  animateScoreCounter(oldValue: number, newValue: number): Promise<void>
+  showProfitExplosion(amount: number, position: { x: number, y: number }): Promise<void>
+}
+
+interface AchievementCelebration {
+  type: 'confetti' | 'fireworks' | 'glow'
+  duration: number
+  colors: string[]
+  soundEffect: string
+}
+```
+
+### 8. Social Feed Engine
+
+**Purpose:** Real-time social interactions and content sharing
+
+**Key Features:**
+- Live trade broadcasting
+- Achievement sharing
+- User interactions (likes, comments)
+- Viral content promotion
+
+**Interface:**
+```typescript
+interface SocialFeedEngine {
+  broadcastTrade(trade: TradeEvent): Promise<void>
+  shareAchievement(userId: string, achievement: Achievement): Promise<FeedPost>
+  getUserFeed(userId: string, limit: number): Promise<FeedPost[]>
+  interactWithPost(userId: string, postId: string, action: 'like' | 'comment'): Promise<void>
+}
+
+interface FeedPost {
+  id: string
+  userId: string
+  type: 'trade' | 'achievement' | 'milestone' | 'prediction'
+  content: string
+  metadata: any
+  timestamp: Date
+  likes: number
+  comments: number
+  isViral: boolean
+}
+```
+
 ## Data Models
 
 ### Enhanced Database Schema
 
 ```sql
--- Users and Authentication
+-- Enhanced Users and Authentication
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  username VARCHAR(50) UNIQUE,
+  email VARCHAR(255) UNIQUE,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  display_name VARCHAR(100),
+  avatar_url TEXT,
+  bio TEXT,
+  is_guest BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT NOW(),
   last_active TIMESTAMP DEFAULT NOW(),
-  preferences JSONB DEFAULT '{}'
+  preferences JSONB DEFAULT '{}',
+  -- Social Stats
+  followers_count INTEGER DEFAULT 0,
+  following_count INTEGER DEFAULT 0,
+  total_score INTEGER DEFAULT 0,
+  rank_tier VARCHAR(20) DEFAULT 'bronze',
+  -- Privacy Settings
+  profile_public BOOLEAN DEFAULT TRUE,
+  trades_public BOOLEAN DEFAULT TRUE,
+  allow_copy_trading BOOLEAN DEFAULT FALSE
 );
 
 -- Portfolio Management
@@ -330,6 +441,84 @@ CREATE TABLE market_events (
   sentiment VARCHAR(20),
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Copy Trading System
+CREATE TABLE copy_relationships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  copier_id UUID REFERENCES users(id),
+  trader_id UUID REFERENCES users(id),
+  allocation_percentage DECIMAL(5,2) DEFAULT 10.00,
+  auto_copy BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  is_active BOOLEAN DEFAULT TRUE,
+  UNIQUE(copier_id, trader_id)
+);
+
+CREATE TABLE copy_trades (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  original_trade_id UUID REFERENCES trades(id),
+  copy_trade_id UUID REFERENCES trades(id),
+  copier_id UUID REFERENCES users(id),
+  trader_id UUID REFERENCES users(id),
+  copy_ratio DECIMAL(5,4),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Social Feed System
+CREATE TABLE feed_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  post_type VARCHAR(50) NOT NULL,
+  content TEXT,
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT NOW(),
+  likes_count INTEGER DEFAULT 0,
+  comments_count INTEGER DEFAULT 0,
+  is_viral BOOLEAN DEFAULT FALSE,
+  visibility VARCHAR(20) DEFAULT 'public'
+);
+
+CREATE TABLE feed_interactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  post_id UUID REFERENCES feed_posts(id),
+  interaction_type VARCHAR(20) NOT NULL,
+  content TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, post_id, interaction_type)
+);
+
+CREATE TABLE user_follows (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  follower_id UUID REFERENCES users(id),
+  following_id UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  notifications_enabled BOOLEAN DEFAULT TRUE,
+  UNIQUE(follower_id, following_id)
+);
+
+-- Achievement System Enhancement
+CREATE TABLE achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  icon_url TEXT,
+  category VARCHAR(50),
+  points INTEGER DEFAULT 0,
+  rarity VARCHAR(20) DEFAULT 'common',
+  criteria JSONB,
+  celebration_type VARCHAR(50) DEFAULT 'confetti'
+);
+
+CREATE TABLE user_achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  achievement_id UUID REFERENCES achievements(id),
+  unlocked_at TIMESTAMP DEFAULT NOW(),
+  progress JSONB,
+  shared_to_feed BOOLEAN DEFAULT FALSE,
+  UNIQUE(user_id, achievement_id)
+);
 ```
 
 ## Error Handling
@@ -395,6 +584,40 @@ class MarketEngineService {
 - **Onboarding Flow:** New user completion rates
 - **Mobile Responsiveness:** Touch interactions, performance
 - **Accessibility:** Screen reader compatibility, keyboard navigation
+
+## Arcade-Style UI Architecture
+
+### Visual Design System
+- **Color Palette:** Neon cyan (#00FFFF), electric blue (#0080FF), hot pink (#FF1493), lime green (#32CD32)
+- **Typography:** Futuristic monospace fonts with glow effects
+- **Animations:** CSS transitions, Framer Motion for complex animations
+- **Sound System:** Web Audio API for real-time sound effects
+
+### Component Architecture
+```typescript
+// Arcade UI Components
+interface ArcadeComponents {
+  ScoreCounter: React.FC<{ value: number; animated: boolean }>
+  NeonButton: React.FC<{ variant: 'primary' | 'secondary'; glowColor: string }>
+  AchievementToast: React.FC<{ achievement: Achievement; onComplete: () => void }>
+  TradingCard: React.FC<{ position: Position; animated: boolean }>
+  LeaderboardRank: React.FC<{ user: User; rank: number; highlighted: boolean }>
+}
+
+// Animation System
+interface AnimationEngine {
+  celebrateAchievement(type: 'confetti' | 'fireworks' | 'glow'): Promise<void>
+  animateProfit(amount: number, element: HTMLElement): Promise<void>
+  pulseElement(element: HTMLElement, color: string): Promise<void>
+  typewriterEffect(text: string, element: HTMLElement): Promise<void>
+}
+```
+
+### Mobile-First Responsive Design
+- **Breakpoints:** Mobile (320px+), Tablet (768px+), Desktop (1024px+)
+- **Touch Gestures:** Swipe for quick actions, long press for details
+- **Progressive Enhancement:** Core functionality works without JavaScript
+- **Performance:** Lazy loading, code splitting, optimized animations
 
 ## Performance Considerations
 

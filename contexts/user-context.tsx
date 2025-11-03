@@ -1,6 +1,7 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { User, AuthSession, ensureAuthSession, logout as authLogout } from "@/lib/auth"
 
 type UserStats = {
   trades: number
@@ -21,125 +22,159 @@ type UserSettings = {
   refreshInterval: number
 }
 
-type User = {
-  username: string
-  avatar: string
-  joinDate: Date
+type UserContextType = {
+  user: User | null
+  session: AuthSession | null
+  isLoading: boolean
+  isGuest: boolean
   stats: UserStats
   settings: UserSettings
-}
-
-type UserContextType = {
-  user: User
   updateUsername: (username: string) => void
   updateAvatar: (avatar: string) => void
   updateSettings: (settings: Partial<UserSettings>) => void
   incrementTrades: () => void
   addXP: (amount: number) => void
   addBadge: (badge: string) => void
+  logout: () => Promise<void>
+  refreshSession: () => Promise<void>
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User>({
-    username: "anon_trader",
-    avatar: "👾",
-    joinDate: new Date(),
-    stats: {
-      trades: 42,
-      winRate: 58,
-      avgReturn: 7.2,
-      bestTrade: 124,
-      worstTrade: -35,
-      level: 3,
-      xp: 320,
-      badges: ["Early Adopter", "Diamond Hands"],
-    },
-    settings: {
-      theme: "default",
-      notifications: true,
-      soundEffects: true,
-      autoRefresh: true,
-      refreshInterval: 60,
-    },
+  const [session, setSession] = useState<AuthSession | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [stats, setStats] = useState<UserStats>({
+    trades: 0,
+    winRate: 0,
+    avgReturn: 0,
+    bestTrade: 0,
+    worstTrade: 0,
+    level: 1,
+    xp: 0,
+    badges: [],
+  })
+  const [settings, setSettings] = useState<UserSettings>({
+    theme: "default",
+    notifications: true,
+    soundEffects: true,
+    autoRefresh: true,
+    refreshInterval: 60,
   })
 
+  const refreshSession = async () => {
+    try {
+      setIsLoading(true)
+      const newSession = await ensureAuthSession()
+      setSession(newSession)
+      
+      // Load user stats and settings from preferences
+      if (newSession?.user.preferences) {
+        const prefs = newSession.user.preferences as any
+        if (prefs.stats) setStats(prefs.stats)
+        if (prefs.settings) setSettings(prefs.settings)
+      }
+    } catch (error) {
+      console.error('Failed to refresh session:', error)
+      setSession(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    refreshSession()
+  }, [])
+
   const updateUsername = (username: string) => {
-    setUser((prev) => ({
+    if (!session) return
+    setSession(prev => prev ? {
       ...prev,
-      username,
-    }))
+      user: { ...prev.user, username, display_name: username }
+    } : null)
   }
 
   const updateAvatar = (avatar: string) => {
-    setUser((prev) => ({
+    if (!session) return
+    setSession(prev => prev ? {
       ...prev,
-      avatar,
-    }))
+      user: { ...prev.user, avatar_url: avatar }
+    } : null)
   }
 
-  const updateSettings = (settings: Partial<UserSettings>) => {
-    setUser((prev) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        ...settings,
-      },
-    }))
+  const updateSettings = (newSettings: Partial<UserSettings>) => {
+    setSettings(prev => ({ ...prev, ...newSettings }))
+    // TODO: Persist to user preferences API
   }
 
   const incrementTrades = () => {
-    setUser((prev) => ({
+    setStats(prev => ({
       ...prev,
-      stats: {
-        ...prev.stats,
-        trades: prev.stats.trades + 1,
-      },
+      trades: prev.trades + 1,
     }))
   }
 
   const addXP = (amount: number) => {
-    setUser((prev) => {
-      const newXP = prev.stats.xp + amount
+    setStats(prev => {
+      const newXP = prev.xp + amount
       const xpPerLevel = 100
       const newLevel = Math.floor(newXP / xpPerLevel) + 1
 
       return {
         ...prev,
-        stats: {
-          ...prev.stats,
-          xp: newXP,
-          level: newLevel,
-        },
+        xp: newXP,
+        level: newLevel,
       }
     })
   }
 
   const addBadge = (badge: string) => {
-    setUser((prev) => {
-      if (prev.stats.badges.includes(badge)) return prev
+    setStats(prev => {
+      if (prev.badges.includes(badge)) return prev
 
       return {
         ...prev,
-        stats: {
-          ...prev.stats,
-          badges: [...prev.stats.badges, badge],
-        },
+        badges: [...prev.badges, badge],
       }
     })
+  }
+
+  const logout = async () => {
+    try {
+      await authLogout()
+      setSession(null)
+      setStats({
+        trades: 0,
+        winRate: 0,
+        avgReturn: 0,
+        bestTrade: 0,
+        worstTrade: 0,
+        level: 1,
+        xp: 0,
+        badges: [],
+      })
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
   }
 
   return (
     <UserContext.Provider
       value={{
-        user,
+        user: session?.user || null,
+        session,
+        isLoading,
+        isGuest: session?.user?.is_guest || false,
+        stats,
+        settings,
         updateUsername,
         updateAvatar,
         updateSettings,
         incrementTrades,
         addXP,
         addBadge,
+        logout,
+        refreshSession,
       }}
     >
       {children}

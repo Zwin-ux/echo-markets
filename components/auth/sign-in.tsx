@@ -1,40 +1,64 @@
 "use client"
 
 import { useState } from 'react'
-// Removed deprecated supabase import
+import { Button } from '@/components/ui/button'
+import { AuthModal } from './auth-modal'
+import { useUser } from '@/contexts/user-context'
+import { LogIn, User, LogOut } from 'lucide-react'
 
 export default function SignInBox() {
-  const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const { user, isLoading, logout } = useUser()
 
-  async function send() {
-    try {
-      setErr(null)
-      const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined
-      const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } })
-      if (error) throw error
-      setSent(true)
-    } catch (e: any) {
-      setErr(e?.message || 'Failed to send magic link')
-    }
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-cyan-400"></div>
+      </div>
+    )
   }
 
-  if (sent) {
-    return <div className="text-sm bg-green-500/10 border border-green-500/30 p-3 rounded">Check your email for a magic link.</div>
+  if (user) {
+    return (
+      <div className="space-y-2 w-full">
+        <div className="flex items-center gap-2 p-2 bg-gray-800/50 rounded border border-cyan-500/30">
+          <span className="text-lg">{user.avatar_url}</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-cyan-400 truncate">
+              {user.display_name || user.username}
+            </div>
+            {user.is_guest && (
+              <div className="text-xs text-yellow-400">Guest Account</div>
+            )}
+          </div>
+        </div>
+        <Button
+          onClick={logout}
+          variant="outline"
+          size="sm"
+          className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout
+        </Button>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-2 w-full">
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-        className="w-full bg-black border border-green-500/30 rounded px-2 py-2 text-sm"
+      <Button
+        onClick={() => setShowAuthModal(true)}
+        className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white"
+      >
+        <LogIn className="w-4 h-4 mr-2" />
+        Login / Register
+      </Button>
+      
+      <AuthModal 
+        open={showAuthModal} 
+        onOpenChange={setShowAuthModal} 
       />
-      <button onClick={send} className="btn-hud w-full">Send Magic Link</button>
-      {err && <div className="text-xs text-red-400">{err}</div>}
     </div>
   )
 }

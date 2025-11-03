@@ -14,6 +14,11 @@ Echo Markets Alpha Demo transforms the current trading simulation into a compell
 - **Leaderboard Engine**: Real-time ranking system based on portfolio performance and trading metrics
 - **Portfolio Simulator**: Core engine that manages virtual holdings, cash, and P&L calculations
 - **Real-time Feed**: Live streaming system for price updates, trades, and market events
+- **Copy Trading Engine**: System that automatically replicates successful traders' positions for followers
+- **Arcade Interface**: Neon cyberpunk-themed UI with animations, sound effects, and gaming elements
+- **Achievement Celebration System**: Visual and audio feedback system for unlocking milestones and achievements
+- **Social Feed Engine**: Real-time system for broadcasting trades, achievements, and social interactions
+- **Viral Growth System**: Features designed to encourage user sharing and referrals through gamification
 
 ## Requirements
 
@@ -64,6 +69,30 @@ Echo Markets Alpha Demo transforms the current trading simulation into a compell
 3. WHILE viewing the trade feed, THE Echo Markets System SHALL show trade impact on stock prices
 4. WHEN users achieve significant gains or losses, THE Echo Markets System SHALL highlight these events in the feed
 5. THE Echo Markets System SHALL allow users to follow top performers and view their trading strategies
+
+### Requirement 11: Copy Trading System
+
+**User Story:** As a novice trader, I want to automatically copy successful traders' positions, so that I can learn from experts while potentially earning profits.
+
+#### Acceptance Criteria
+
+1. THE Echo Markets System SHALL allow users to enable copy trading for specific traders
+2. WHEN a followed trader executes a trade, THE Echo Markets System SHALL automatically execute proportional trades for copiers
+3. THE Echo Markets System SHALL allow users to set allocation percentages for copy trading
+4. WHEN copy trades are executed, THE Echo Markets System SHALL track and display copy trading performance separately
+5. THE Echo Markets System SHALL provide copy trading analytics showing which traders are most copied and their success rates
+
+### Requirement 12: Arcade-Style User Interface
+
+**User Story:** As a gamer, I want a visually exciting interface with neon colors and animations, so that trading feels like playing an engaging arcade game.
+
+#### Acceptance Criteria
+
+1. THE Echo Markets System SHALL use a neon cyberpunk color scheme with glowing elements
+2. WHEN users make profitable trades, THE Echo Markets System SHALL display animated celebration effects
+3. THE Echo Markets System SHALL show animated score counters and progress bars for achievements
+4. WHEN users unlock achievements, THE Echo Markets System SHALL display popup celebrations with confetti effects
+5. THE Echo Markets System SHALL provide sound effects for trades, achievements, and UI interactions
 
 ### Requirement 5: Achievement and Progression System
 
@@ -136,3 +165,27 @@ Echo Markets Alpha Demo transforms the current trading simulation into a compell
 3. THE Echo Markets System SHALL save user preferences and restore them across sessions
 4. THE Echo Markets System SHALL provide multiple chart types and technical indicators
 5. WHERE users have specific preferences, THE Echo Markets System SHALL allow theme customization and layout options
+
+### Requirement 13: Enhanced Authentication System
+
+**User Story:** As a new player, I want quick and simple account creation with guest mode options, so that I can start trading immediately without barriers.
+
+#### Acceptance Criteria
+
+1. THE Echo Markets System SHALL provide simple registration with username and password only
+2. THE Echo Markets System SHALL offer guest mode for immediate access without registration
+3. WHEN users create accounts, THE Echo Markets System SHALL generate unique avatars automatically
+4. THE Echo Markets System SHALL allow optional email for password recovery
+5. THE Echo Markets System SHALL save guest progress and allow conversion to permanent accounts
+
+### Requirement 14: Viral Growth Features
+
+**User Story:** As an engaged player, I want to share my achievements and invite friends, so that I can build a community and compete with people I know.
+
+#### Acceptance Criteria
+
+1. THE Echo Markets System SHALL allow users to share trading achievements on social media
+2. THE Echo Markets System SHALL provide referral bonuses for bringing new users
+3. WHEN users achieve milestones, THE Echo Markets System SHALL generate shareable achievement cards
+4. THE Echo Markets System SHALL allow users to create and share trading challenges with friends
+5. THE Echo Markets System SHALL track referral success and provide leaderboards for top referrers
