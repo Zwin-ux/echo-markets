@@ -24,8 +24,7 @@
     "db:deploy": "prisma migrate deploy",
     "test:enhanced-db": "node scripts/test-enhanced-db.mjs",
     "deploy:prepare": "npm run db:generate && npm run test:unit && npm run build",
-    "setup:beta": "node scripts/setup-beta.mjs",
-
+    "setup:beta": "node scripts/setup-beta.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -84,7 +83,6 @@
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",
-
     "@types/jest": "^29.5.14",
     "@types/node": "^22",
     "@types/react": "^19",
