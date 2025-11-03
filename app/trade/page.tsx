@@ -69,9 +69,9 @@ export default function TradePage() {
   const [orderAmount, setOrderAmount] = useState<string>('')
   const [dramaScore, setDramaScore] = useState(42)
   const [marketEvents, setMarketEvents] = useState<string[]>([
-    "📈 NVDA announces breakthrough in AI chip technology",
-    "⚡ Tesla reports record quarterly deliveries",
-    "🔥 Market volatility spikes on Fed announcement"
+    "📈 NVDA chip breakthrough drives tech rally",
+    "⚡ Tesla delivery numbers beat expectations",
+    "🔥 Fed announcement triggers volatility spike"
   ])
 
   // Simulate real-time price updates
@@ -100,11 +100,11 @@ export default function TradePage() {
       // Occasionally add market events
       if (Math.random() < 0.1) {
         const events = [
-          "🚨 Breaking: Major tech earnings surprise",
-          "📊 Market sentiment shifts bullish",
-          "⚠️ Volatility alert: High trading volume detected",
-          "🎯 Analyst upgrades drive momentum",
-          "💥 Sector rotation creates opportunities"
+          "🚨 Tech earnings beat across the board",
+          "📊 Bulls take control as sentiment shifts",
+          "⚠️ Volume surge triggers volatility alert",
+          "🎯 Analyst upgrades fuel rally",
+          "💥 Sector rotation in full swing"
         ]
         const newEvent = events[Math.floor(Math.random() * events.length)]
         setMarketEvents(prev => [newEvent, ...prev.slice(0, 2)])
@@ -247,7 +247,7 @@ export default function TradePage() {
             />
             <div>
               <h1 className="text-2xl font-bold text-cyan-400">LATTICE</h1>
-              <p className="text-xs text-cyan-300">Virtual Trading Platform</p>
+              <p className="text-xs text-cyan-300">by Bonelli.dev</p>
             </div>
           </div>
           
@@ -381,7 +381,7 @@ export default function TradePage() {
                 </div>
               ) : (
                 <div className="text-center text-gray-400 py-8">
-                  Select a stock to trade
+                  Click a stock to start trading
                 </div>
               )}
             </CardContent>
@@ -445,7 +445,7 @@ export default function TradePage() {
                 </div>
               ) : (
                 <div className="text-center text-gray-400 py-4">
-                  No positions yet
+                  No positions yet - start trading!
                 </div>
               )}
             </CardContent>

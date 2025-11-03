@@ -84,9 +84,12 @@ export default function BetaPage() {
               />
               <div>
                 <h1 className="text-2xl font-bold text-cyan-400">LATTICE</h1>
-                <Badge variant="outline" className="text-cyan-400 border-cyan-400 text-xs">
-                  BETA
-                </Badge>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline" className="text-cyan-400 border-cyan-400 text-xs">
+                    BETA
+                  </Badge>
+                  <span className="text-xs text-cyan-300">by Bonelli.dev</span>
+                </div>
               </div>
             </div>
           </div>
@@ -109,11 +112,11 @@ export default function BetaPage() {
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <h2 className="text-4xl font-bold mb-4">
-            The Future of <span className="text-cyan-400">Virtual Trading</span>
+            Virtual Trading <span className="text-cyan-400">Reimagined</span>
           </h2>
           <p className="text-xl text-cyan-300 mb-8 max-w-3xl mx-auto">
-            Experience realistic market simulation powered by advanced algorithms. 
-            Trade with $10,000 virtual cash, compete on leaderboards, and master the markets.
+            Real market dynamics. $10,000 starting capital. Zero risk. 
+            Trade, compete, and learn in our live simulation environment.
           </p>
           
           {/* Live Market Stats */}
@@ -203,34 +206,34 @@ export default function BetaPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <Card className="bg-cyan-500/10 border-cyan-500/30">
               <CardHeader>
-                <CardTitle className="text-cyan-400">🎯 Realistic Trading</CardTitle>
+                <CardTitle className="text-cyan-400">🎯 Real Market Feel</CardTitle>
                 <CardDescription className="text-cyan-300">
-                  Advanced market simulation using Geometric Brownian Motion
+                  Authentic trading with realistic price movements and market dynamics
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="text-sm text-cyan-200 space-y-2">
                   <li>• $10,000 starting capital</li>
-                  <li>• Real-time price updates</li>
+                  <li>• Live price updates</li>
                   <li>• Market & limit orders</li>
-                  <li>• Bid-ask spreads</li>
+                  <li>• Real bid-ask spreads</li>
                 </ul>
               </CardContent>
             </Card>
 
             <Card className="bg-blue-500/10 border-blue-500/30">
               <CardHeader>
-                <CardTitle className="text-blue-400">📈 Dynamic Markets</CardTitle>
+                <CardTitle className="text-blue-400">📈 Live Events</CardTitle>
                 <CardDescription className="text-blue-300">
-                  AI-powered market events and volatility modeling
+                  Market-moving news and events that affect stock prices
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="text-sm text-blue-200 space-y-2">
-                  <li>• Earnings announcements</li>
-                  <li>• Breaking news events</li>
-                  <li>• Sector rotations</li>
-                  <li>• Volatility spikes</li>
+                  <li>• Earnings surprises</li>
+                  <li>• Breaking news</li>
+                  <li>• Sector shifts</li>
+                  <li>• Volatility alerts</li>
                 </ul>
               </CardContent>
             </Card>
@@ -307,12 +310,11 @@ export default function BetaPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 px-4 bg-green-500/5">
+      <section className="py-16 px-4 bg-cyan-500/5">
         <div className="max-w-4xl mx-auto text-center">
           <h3 className="text-3xl font-bold mb-4">Ready to Trade?</h3>
-          <p className="text-xl text-green-300 mb-8">
-            Join the beta and experience the future of virtual trading. 
-            No real money at risk - just pure trading skill.
+          <p className="text-xl text-cyan-300 mb-8">
+            Jump into the action. No signups, no real money, just pure trading.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -333,16 +335,16 @@ export default function BetaPage() {
             </Button>
           </div>
           
-          <div className="mt-8 text-sm text-green-400">
-            <p>🚀 Beta Version • Real-time Market Simulation • No Registration Required</p>
+          <div className="mt-8 text-sm text-cyan-400">
+            <p>🚀 Beta Version • Live Market Simulation • No Registration Required</p>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-green-500/30 py-8 px-4">
-        <div className="max-w-6xl mx-auto text-center text-green-500/70">
-          <p>&copy; 2024 Echo Markets Beta. Built with Next.js, PostgreSQL, and Redis.</p>
+      <footer className="border-t border-cyan-500/30 py-8 px-4">
+        <div className="max-w-6xl mx-auto text-center text-cyan-500/70">
+          <p>&copy; 2024 Lattice by Bonelli.dev. Built with Next.js, PostgreSQL, and Redis.</p>
           <p className="mt-2 text-xs">
             Market data is simulated. No real financial instruments are traded.
           </p>
