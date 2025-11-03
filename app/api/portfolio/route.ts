@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseForRequest } from '@/lib/supabase-server'
+// Removed deprecated supabase import
 
 export interface PortfolioResponse {
   balance: number

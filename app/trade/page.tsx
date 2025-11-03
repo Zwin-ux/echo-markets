@@ -7,10 +7,9 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { TrendingUp, TrendingDown, Activity, DollarSign, Zap, Target, Trophy, ArrowUp, ArrowDown } from "lucide-react"
+import { Activity, DollarSign, Zap, Target, Trophy, ArrowUp, ArrowDown } from "lucide-react"
 import Image from "next/image"
 
 interface Stock {

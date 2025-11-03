@@ -10,7 +10,7 @@ import { useModule } from '@/contexts/module-context'
 import { useGameEngine, createLevelUpEvent, createXPGainEvent } from '@/contexts/game-engine-context'
 import { toast } from '@/hooks/use-toast'
 import { useMarketPrices } from '@/contexts/market-prices-context'
-import supabase from '@/lib/supabase'
+// Removed deprecated supabase import
 import { subscribeOrders } from '@/lib/db'
 
 export default function TradingModule() {

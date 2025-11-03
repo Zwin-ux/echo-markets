@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import supabase from '@/lib/supabase'
+// Removed deprecated supabase import
 
 export default function SignInBox() {
   const [email, setEmail] = useState('')

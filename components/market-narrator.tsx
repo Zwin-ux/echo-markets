@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { MessageSquare, Maximize2, Minimize2, X, RefreshCw, Download } from "lucide-react"
-import supabase from '@/lib/supabase'
+// Removed deprecated supabase import
 
 export default function NarratorModule() {
   const [isMaximized, setIsMaximized] = useState(false)

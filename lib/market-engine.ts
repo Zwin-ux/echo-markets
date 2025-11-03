@@ -163,8 +163,11 @@ class MarketEngine {
     // Apply sector correlation effects
     const sectorEffect = this.calculateSectorEffect(symbol)
     
+    // Apply direct event impact
+    const eventImpact = this.calculateEventImpact(symbol, deltaTime)
+    
     // Calculate new price
-    const priceMultiplier = Math.exp(drift + diffusion + sectorEffect)
+    const priceMultiplier = Math.exp(drift + diffusion + sectorEffect + eventImpact)
     let newPrice = currentPrice * priceMultiplier
     
     // Apply circuit breakers
@@ -239,6 +242,29 @@ class MarketEngine {
     
     // Cap volatility at reasonable levels
     return Math.min(adjustedVolatility, 2.0) // Max 200% annualized volatility
+  }
+  
+  /**
+   * Calculate direct price impact from market events
+   */
+  private calculateEventImpact(symbol: SymbolTicker, deltaTime: number): number {
+    let totalImpact = 0
+    
+    for (const event of this.activeEvents) {
+      if (event.affectedSymbols.includes(symbol)) {
+        // Calculate impact decay based on event age
+        const eventAge = Date.now() - (event.createdAt?.getTime() || 0)
+        const ageMinutes = eventAge / (1000 * 60)
+        const decayFactor = Math.max(0, 1 - ageMinutes / event.duration)
+        
+        // Apply impact with decay
+        const impactMagnitude = event.impact * decayFactor * deltaTime * 365 // Annualized impact
+        totalImpact += impactMagnitude
+      }
+    }
+    
+    // Cap total impact to prevent extreme moves
+    return Math.max(-0.1, Math.min(0.1, totalImpact)) // Max ±10% impact per update
   }
   
   /**
@@ -378,10 +404,15 @@ class MarketEngine {
   }
   
   /**
-   * Update market state
+   * Update market state and sync with market event system
    */
   updateMarketState(): void {
     this.marketState.isOpen = this.isMarketOpen()
+    
+    // Sync active events from market event system
+    this.syncActiveEvents()
+    
+    // Filter out expired events
     this.marketState.activeEvents = this.activeEvents.filter(event => {
       const eventAge = Date.now() - (event.createdAt?.getTime() || 0)
       return eventAge < event.duration * 60 * 1000 // Convert minutes to milliseconds
@@ -392,6 +423,19 @@ class MarketEngine {
     
     // Update volatility regime
     this.updateVolatilityRegime()
+  }
+  
+  /**
+   * Sync active events from the market event system
+   */
+  private async syncActiveEvents(): Promise<void> {
+    try {
+      // Import here to avoid circular dependency
+      const { marketEventSystem } = await import('./market-events')
+      this.activeEvents = marketEventSystem.getActiveEvents()
+    } catch (error) {
+      console.error('Failed to sync market events:', error)
+    }
   }
   
   /**

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseForRequest } from '@/lib/supabase-server'
+// Removed deprecated supabase import
 
 type OrderSide = 'buy' | 'sell'
 type OrderType = 'market' | 'limit'

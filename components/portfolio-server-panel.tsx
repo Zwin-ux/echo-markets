@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import supabase from '@/lib/supabase'
+// Removed deprecated supabase import
 
 type ServerPosition = {
   symbol: string

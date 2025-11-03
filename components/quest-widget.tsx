@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import supabase from '@/lib/supabase'
+// Removed deprecated supabase import
 import { toast } from '@/hooks/use-toast'
 
 type Quest = { day: string; goal_pnl: number; progress_pnl: number; done: boolean }

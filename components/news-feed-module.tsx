@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Newspaper, Maximize2, Minimize2, X, RefreshCw, Filter, ThumbsUp, ThumbsDown } from "lucide-react"
-import supabase from '@/lib/supabase'
+// Removed deprecated supabase import
 import { useSSE } from '@/lib/use-sse'
 
 type FeedItem =

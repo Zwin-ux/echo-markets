@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseService } from '@/lib/supabase-server'
+// Removed deprecated supabase import
 import { getStartingCash } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'

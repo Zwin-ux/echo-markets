@@ -1,31 +1,31 @@
-import supabase from './supabase'
-
 /**
  * Ensures there is an authenticated session (anonymous to start) and
- * initializes user data (profiles, portfolio) via RPC.
+ * initializes user data (profiles, portfolio) via API.
  */
 export async function ensureAnonSessionAndInit() {
-  const { data: sessionData } = await supabase.auth.getSession()
-  let session = sessionData.session
-
-  if (!session) {
-    const { data: signInData, error: signInError } = await supabase.auth.signInAnonymously()
-    if (signInError) {
-      // eslint-disable-next-line no-console
-      console.warn('[auth] Anonymous sign-in disabled or failed; continuing without session')
-    } else {
-      session = signInData.session ?? null
+  try {
+    // Create or get anonymous session using our game API
+    const response = await fetch('/api/game/player', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'init' })
+    })
+    
+    if (!response.ok) {
+      console.warn('[auth] Failed to initialize player session')
+      return null
     }
-  }
-
-  if (session) {
-    // Call init_user to ensure profile + portfolio exist
-    const { error: initError } = await supabase.rpc('init_user')
-    if (initError) {
-      // eslint-disable-next-line no-console
-      console.warn('[auth] init_user RPC failed (may already exist):', initError.message)
+    
+    const playerData = await response.json()
+    
+    // Store player ID in localStorage for session persistence
+    if (playerData.playerId) {
+      localStorage.setItem('lattice_player_id', playerData.playerId)
     }
+    
+    return { user: { id: playerData.playerId } }
+  } catch (error) {
+    console.error('[auth] Session initialization failed:', error)
+    return null
   }
-
-  return session
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseForRequest } from '@/lib/supabase-server'
+// Removed deprecated supabase import
 import { defaultQuest, todayStr } from '@/lib/progression'
 
 export async function GET(req: NextRequest) {
