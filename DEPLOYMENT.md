@@ -67,6 +67,68 @@ DATABASE_QUERY_TIMEOUT=30000
 ENABLE_REALTIME=true
 ```
 
+## 🚂 Deploy to Railway
+
+Railway can run the same production build that we ship to Vercel. The commands below assume you already have the Railway CLI installed (`npm i -g @railway/cli`) and are logged in (`railway login`).
+
+### 1. Create a project & databases
+
+```bash
+# From the repo root
+railway init --environment production
+
+# Provision PostgreSQL (and Redis if you want cache support)
+railway add --plugin postgresql
+railway add --plugin redis # optional
+
+# Show connection strings so you can drop them into .env.production
+railway variables
+```
+
+Copy the generated `DATABASE_URL` (and optionally `REDIS_URL`) into your local `.env.production` so you can test the build exactly as Railway will run it.
+
+### 2. Push environment variables
+
+```bash
+railway variables set \
+  DATABASE_URL="<postgres-connection-string>" \
+  DIRECT_URL="<postgres-direct-connection-string>" \
+  CRON_SECRET="<random-secret>" \
+  ENABLE_REALTIME="true"
+
+# Optional cache config
+railway variables set \
+  REDIS_URL="<redis-connection-string>" \
+  ENABLE_REDIS_CACHE="true"
+```
+
+> **Tip:** Railway snapshots the variables per environment. If you promote staging ➜ production later, the values stay intact.
+
+### 3. Configure the build
+
+Add the following in the Railway dashboard under **Settings → Deployments → Build & Start Commands**:
+
+- **Build Command:** `npm install --prefer-offline --no-audit --progress=false && npm run build`
+- **Start Command:** `npm run start`
+
+These commands mirror local production builds (`next build` + `next start`).
+
+### 4. Seed & verify
+
+```bash
+# Run migrations and seed through Railway's remote shell
+railway run npm run db:deploy
+railway run npm run db:seed
+
+# Optional: kick the enhanced ticker locally to simulate production cadence
+railway run npm run dev:enhanced-ticker
+
+# Smoke-test the deploy
+railway run curl -s http://0.0.0.0:3000/api/health
+```
+
+Railway exposes the service on a generated domain once the first deploy succeeds. You can wire that into a custom domain or proxy later.
+
 ### 5. Post-Deployment Setup
 
 1. **Seed the database:**
