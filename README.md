@@ -2,6 +2,8 @@
 
 **Paper-trading platform for market psychology experiments.**
 
+![Showcase](showcase/echo-markets.gif)
+
 Echo Markets is a Next.js playground where you can throw fake money at real-feeling markets. Live tickers, order matching, portfolio tracking — no real risk, all the signal.
 
 ## Features
