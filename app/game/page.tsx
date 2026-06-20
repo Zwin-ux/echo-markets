@@ -979,24 +979,24 @@ export default function GamePage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-3 py-3 space-y-3 sm:px-4 sm:py-6 sm:space-y-6">
+      <main className="mx-auto max-w-7xl space-y-3 px-3 py-3 sm:space-y-5 sm:px-4 sm:py-5">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
           <TabsList className="grid h-auto w-full grid-cols-3 bg-gray-900/70 border border-cyan-500/30 text-gray-400 sm:inline-flex sm:w-auto">
-            <TabsTrigger value="loop" className="min-h-11 px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:min-h-0 sm:px-3 sm:text-sm">
+            <TabsTrigger value="loop" className="min-h-11 px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:px-3 sm:text-sm">
               <BarChart3 className="w-3.5 h-3.5 mr-1.5 sm:w-4 sm:h-4 sm:mr-2" /> Core Loop
             </TabsTrigger>
-            <TabsTrigger value="portfolio" className="min-h-11 px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:min-h-0 sm:px-3 sm:text-sm">
+            <TabsTrigger value="portfolio" className="min-h-11 px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:px-3 sm:text-sm">
               <PieChart className="w-3.5 h-3.5 mr-1.5 sm:w-4 sm:h-4 sm:mr-2" /> Portfolio
             </TabsTrigger>
-            <TabsTrigger value="culture" className="min-h-11 px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:min-h-0 sm:px-3 sm:text-sm">
+            <TabsTrigger value="culture" className="min-h-11 px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:px-3 sm:text-sm">
               <Users className="w-3.5 h-3.5 mr-1.5 sm:w-4 sm:h-4 sm:mr-2" /> Culture
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="loop" className="space-y-4 sm:space-y-6">
-            <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-3">
-              <div className="contents xl:col-span-2 xl:block xl:space-y-6">
-                <Card className="order-1 bg-gray-950/80 border-cyan-500/40">
+          <TabsContent value="loop" className="space-y-3 sm:space-y-5">
+            <div className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[minmax(0,1.7fr)_380px]">
+              <div className="contents xl:block xl:space-y-5">
+                <Card className="order-2 border-cyan-500/40 bg-[#02070d] shadow-[inset_0_1px_0_rgba(34,211,238,0.10)] xl:order-none">
                   <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                       <CardTitle className="flex items-center text-cyan-300 text-lg">
@@ -1016,7 +1016,7 @@ export default function GamePage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6">
-                    <div className="p-3 sm:p-4 rounded-lg border border-cyan-500/20 bg-black/40">
+                    <div className="rounded-md border border-cyan-500/20 bg-black/40 p-3 sm:p-4">
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <Badge variant="outline" className="uppercase text-xs tracking-widest">
                           {currentBeat.mood}
@@ -1031,7 +1031,7 @@ export default function GamePage() {
                       <p className="line-clamp-2 text-sm text-gray-300 mt-2 leading-5 sm:leading-relaxed">{currentBeat.synopsis}</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 sm:gap-3">
                       {currentBeat.options.map((option) => {
                         const votes = communityVotes[option.id] ?? 0
                         const share = totalVotes ? Math.round((votes / totalVotes) * 100) : 0
@@ -1039,7 +1039,7 @@ export default function GamePage() {
                           <button
                             key={option.id}
                             onClick={() => handleVote(option)}
-                            className="group relative min-h-[124px] p-3 sm:min-h-[150px] sm:p-4 border border-cyan-500/20 rounded-lg text-left bg-black/40 hover:border-cyan-400 active:border-cyan-300 active:bg-cyan-500/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                            className="group relative min-h-[104px] rounded-md border border-cyan-500/20 bg-black/40 p-3 text-left transition hover:border-cyan-400 active:border-cyan-300 active:bg-cyan-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:min-h-[132px] sm:p-4"
                           >
                             <div className="flex items-start justify-between">
                               <div className="font-semibold text-cyan-200 leading-5">{option.label}</div>
@@ -1062,7 +1062,7 @@ export default function GamePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="order-3 bg-gray-950/80 border-cyan-500/40">
+                <Card className="order-3 border-cyan-500/40 bg-[#02070d] xl:order-none">
                   <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
                     <div>
                       <CardTitle className="flex items-center text-cyan-300 text-lg">
@@ -1085,40 +1085,40 @@ export default function GamePage() {
                     </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-1 gap-2">
                       {stocks.map((stock) => (
                         <button
                           key={stock.symbol}
                           type="button"
-                          className={`w-full p-3 sm:p-4 rounded-lg border text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${
+                          className={`grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:grid-cols-[minmax(0,1.35fr)_auto_minmax(160px,0.65fr)] sm:items-center ${
                             selectedStock?.symbol === stock.symbol
-                              ? "border-cyan-400 bg-cyan-500/10 shadow-[0_0_20px_rgba(34,211,238,0.2)]"
-                              : "border-gray-800 hover:border-cyan-400/50"
+                              ? "border-cyan-400 bg-cyan-500/10 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]"
+                              : "border-gray-800 bg-black/20 hover:border-cyan-400/50"
                           }`}
                           onClick={() => setSelectedStock(stock)}
                         >
-                          <div className="flex items-start justify-between">
-                            <div>
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
                               <div className="text-lg font-bold text-cyan-200">{stock.symbol}</div>
-                              <div className="text-xs text-gray-400">{stock.name}</div>
-                              <Badge variant="outline" className="text-xs mt-1 uppercase">
+                              <div className="truncate text-xs text-gray-400">{stock.name}</div>
+                              <Badge variant="outline" className="text-xs uppercase">
                                 {stock.sector}
                               </Badge>
                             </div>
-                            <div className="text-right">
-                              <div className="text-lg text-cyan-100">${stock.price.toFixed(2)}</div>
-                              <div
-                                className={`text-xs flex items-center justify-end ${
-                                  stock.changePercent >= 0 ? "text-green-400" : "text-red-400"
-                                }`}
-                              >
-                                {stock.changePercent >= 0 ? <ArrowUp className="w-3 h-3 mr-1" /> : <ArrowDown className="w-3 h-3 mr-1" />}
-                                {Math.abs(stock.changePercent).toFixed(2)}%
-                              </div>
+                            <p className="mt-2 line-clamp-1 text-xs leading-relaxed text-gray-400">{stock.storyline}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg text-cyan-100">${stock.price.toFixed(2)}</div>
+                            <div
+                              className={`flex items-center justify-end text-xs ${
+                                stock.changePercent >= 0 ? "text-green-400" : "text-red-400"
+                              }`}
+                            >
+                              {stock.changePercent >= 0 ? <ArrowUp className="w-3 h-3 mr-1" /> : <ArrowDown className="w-3 h-3 mr-1" />}
+                              {Math.abs(stock.changePercent).toFixed(2)}%
                             </div>
                           </div>
-                          <p className="text-xs text-gray-400 mt-3 leading-relaxed">{stock.storyline}</p>
-                          <div className="flex items-center gap-2 mt-3 text-xs text-gray-400">
+                          <div className="col-span-2 flex items-center gap-2 text-xs text-gray-400 sm:col-span-1">
                             <span>Momentum</span>
                             <div className="flex-1 bg-gray-800 h-2 rounded-full overflow-hidden">
                               <div
@@ -1136,7 +1136,7 @@ export default function GamePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="order-5 bg-gray-950/80 border-cyan-500/40">
+                <Card className="order-5 border-cyan-500/40 bg-[#02070d] xl:order-none">
                   <CardHeader>
                     <CardTitle className="flex items-center text-cyan-300 text-lg">
                       <Newspaper className="w-5 h-5 mr-2" /> Market Events & Rumors
@@ -1174,8 +1174,8 @@ export default function GamePage() {
                 </Card>
               </div>
 
-              <div className="contents xl:block xl:space-y-6">
-                <Card className="order-2 bg-gray-950/80 border-cyan-500/40">
+              <div className="contents xl:block xl:space-y-5">
+                <Card className="order-1 border-cyan-300/60 bg-[#011014] shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)] xl:order-none">
                   <CardHeader>
                     <CardTitle className="flex items-center text-cyan-300 text-lg">
                       <Target className="w-5 h-5 mr-2" /> Quick Trade Console
@@ -1187,7 +1187,7 @@ export default function GamePage() {
                   <CardContent className="space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6">
                     {selectedStock ? (
                       <div className="space-y-4">
-                        <div className="p-3 border border-cyan-500/20 rounded-lg bg-black/50">
+                        <div className="rounded-md border border-cyan-500/20 bg-black/50 p-3">
                           <div className="flex items-center justify-between">
                             <div>
                               <div className="text-lg text-cyan-200 font-bold">{selectedStock.symbol}</div>
@@ -1251,7 +1251,7 @@ export default function GamePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="order-4 bg-gray-950/80 border-cyan-500/40">
+                <Card className="order-4 border-cyan-500/40 bg-[#02070d] xl:order-none">
                   <CardHeader>
                     <CardTitle className="flex items-center text-cyan-300 text-lg">
                       <Zap className="w-5 h-5 mr-2" /> Community Impulses
@@ -1268,7 +1268,7 @@ export default function GamePage() {
                           key={impulse.id}
                           onClick={() => handleImpulse(impulse)}
                           disabled={cooldown > 0}
-                          className={`min-h-[76px] w-full text-left p-3 sm:p-4 rounded-lg border transition active:border-cyan-300 active:bg-cyan-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${
+                          className={`min-h-[76px] w-full rounded-md border p-3 text-left transition active:border-cyan-300 active:bg-cyan-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:p-4 ${
                             cooldown > 0
                               ? "border-gray-800 text-gray-500"
                               : "border-cyan-500/30 hover:border-cyan-400"
@@ -1296,7 +1296,7 @@ export default function GamePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="order-6 bg-gray-950/80 border-cyan-500/40">
+                <Card className="order-6 border-cyan-500/40 bg-[#02070d] xl:order-none">
                   <CardHeader>
                     <CardTitle className="flex items-center text-cyan-300 text-lg">
                       <Trophy className="w-5 h-5 mr-2" /> Influence Meter
