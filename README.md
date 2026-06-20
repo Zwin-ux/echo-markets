@@ -1,33 +1,85 @@
 # Echo Markets
 
-Paper-trading interface for market psychology and portfolio rehearsal.
+Echo Markets is a paper-trading game about market psychology.
 
-Live demo: https://echo-markets-production.up.railway.app
+Players react to rumor beats, vote on narrative direction, place simulated trades, and watch portfolio value, influence, faction pressure, and market sentiment move together. It is a playable rehearsal loop, not real trading infrastructure.
 
-![Echo Markets demo](showcase/echo-markets.gif)
+[Live demo](https://echo-markets-production.up.railway.app)
 
-Echo Markets turns simulated markets into a playable culture-trading loop. Players react to rumor beats, vote on narrative direction, place paper trades, and watch influence, portfolio value, and market sentiment move together. No real money is involved.
+![Echo Markets desktop proof](showcase/echo-markets-desktop.png)
 
-## What Is Showable
+## What To Look At First
 
-- Browser game UI with market pulse, narrative votes, quick trade console, portfolio state, and culture/faction panels
-- Demo-mode API fallbacks for public deployments when database services are not configured
-- Simulated market engine, order execution route, leaderboard route, and guest-session route
-- Prisma-backed path for persistent sessions when a real database is connected
+If you are reviewing the repo quickly, start here:
 
-## Public Demo Notes
+- `app/game/page.tsx` - primary game surface with market pulse, narrative choice, and trade flow.
+- `lib/market-engine.ts` - simulated market state and price movement logic.
+- `lib/trading.ts` - order validation and execution helpers.
+- `lib/demo-responses.ts` - deterministic public-demo fallbacks when database services are unavailable.
+- `contexts/portfolio-context.tsx` - client portfolio state.
+- `contexts/market-prices-context.tsx` - market price provider.
+- `components/portfolio-module.tsx` and `components/trading-module.tsx` - reusable game panels.
+- `prisma/schema.prisma` - persistent user, trade, portfolio, leaderboard, and event model.
+- `scripts/dev-ticker.mjs`, `scripts/order-matcher.mjs`, and `scripts/narrator.mjs` - background simulation tools.
+- `tests/unit/market-engine.test.ts`, `tests/unit/trading.test.ts`, and `tests/integration/market-engine-integration.test.ts` - focused system checks.
 
-The hosted demo is intentionally a paper-trading prototype. It uses simulated prices and demo users. If the database is unavailable, public routes fall back to deterministic demo responses instead of throwing noisy 500s into the browser console.
+## Product Boundary
 
-## Proof
+Echo Markets is intentionally framed as a game:
 
-- Existing animated showcase: [showcase/echo-markets.gif](showcase/echo-markets.gif)
-- Desktop proof: [showcase/echo-markets-desktop.png](showcase/echo-markets-desktop.png)
-- Mobile proof: [showcase/echo-markets-mobile.png](showcase/echo-markets-mobile.png)
+- No real money.
+- No broker connection.
+- No investment advice.
+- Simulated prices and demo users in the public build.
+- Prisma-backed persistence only when a real database is configured.
+- Demo fallbacks for public routes when database services are unavailable.
+
+The point is to make market psychology tangible: narrative pressure, position sizing, portfolio movement, and leaderboard behavior in one arcade-like surface.
+
+## Screens
+
+| Desktop | Mobile |
+| --- | --- |
+| ![Echo Markets desktop proof](showcase/echo-markets-desktop.png) | ![Echo Markets mobile proof](showcase/echo-markets-mobile.png) |
+
+Motion capture:
+
+![Echo Markets motion capture](showcase/echo-markets.gif)
+
+## What Ships
+
+- Browser game UI with market pulse, narrative votes, quick trade console, portfolio state, and faction panels.
+- Demo-mode API fallbacks for public deployments without database services.
+- Simulated market engine and order execution route.
+- Leaderboard and guest-session routes.
+- Prisma-backed persistence path for real sessions.
+- Redis-ready support for realtime/background state.
+- Jest unit and integration tests for market, trading, auth, progression, and portfolio logic.
 
 ## Stack
 
-Next.js 15, React 19, TypeScript, Prisma, Redis, Jest, Tailwind.
+- Next.js 15
+- React 19
+- TypeScript
+- Tailwind
+- Prisma/PostgreSQL
+- Redis
+- Jest
+- Railway
+
+## Repository Layout
+
+```text
+app/          Next.js app routes and game screens
+components/   UI modules and arcade panels
+contexts/     React state providers
+hooks/        Custom hooks
+lib/          Market engine, trading logic, demo fallbacks, auth, DB helpers
+prisma/       Schema and migrations
+scripts/      Ticker, matcher, narrator, seed, and migration helpers
+showcase/     Public proof media
+tests/        Unit and integration tests
+```
 
 ## Run Locally
 
@@ -36,6 +88,8 @@ corepack pnpm install
 corepack pnpm exec prisma generate
 corepack pnpm dev
 ```
+
+For Prisma-backed routes, set `DATABASE_URL`. Without it, public demo routes are expected to use deterministic fallback responses.
 
 Useful checks:
 
@@ -46,20 +100,10 @@ corepack pnpm dev:ticker
 corepack pnpm engine:orders
 ```
 
-## Project Layout
+## Public Demo Notes
 
-```text
-app/          Next.js app routes and screens
-components/   UI components
-contexts/     React state providers
-hooks/        Custom hooks
-lib/          Market engine, auth helpers, DB helpers
-prisma/       Schema and migrations
-scripts/      Ticker, matcher, narrator, and setup scripts
-showcase/     Public proof media
-tests/        Unit and integration tests
-```
+The hosted demo is a paper-trading prototype. It uses simulated prices and demo users. Public routes should fall back to deterministic demo responses instead of throwing noisy browser errors when database services are not configured.
 
 ## Status
 
-Beta. Market behavior is simulated, API fallbacks are demo-mode by design, and the project should not be described as real trading infrastructure.
+Beta. Echo Markets should be described as a simulated market game and portfolio rehearsal surface, not as trading infrastructure.
