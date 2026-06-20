@@ -1,59 +1,65 @@
 # Echo Markets
 
-**Paper-trading platform for market psychology experiments.**
+Paper-trading interface for market psychology and portfolio rehearsal.
 
-![Showcase](showcase/echo-markets.gif)
+Live demo: https://lattice-trading.vercel.app
 
-Echo Markets is a Next.js playground where you can throw fake money at real-feeling markets. Live tickers, order matching, portfolio tracking — no real risk, all the signal.
+![Echo Markets demo](showcase/echo-markets.gif)
 
-## Features
+Echo Markets turns simulated markets into a playable culture-trading loop. Players react to rumor beats, vote on narrative direction, place paper trades, and watch influence, portfolio value, and market sentiment move together. No real money is involved.
 
-- **Live ticker** — simulated market data with configurable volatility
-- **Order matching** — fill simulation with narration and delay models
-- **Portfolio tracking** — P&L, exposure, position history per session
-- **Market narrator** — color commentary on price action and fills
-- **Closing bell** — session-end recap with performance summary
-- **Prisma-backed state** — PostgreSQL via Prisma for persistent sessions
+## What Is Showable
+
+- Browser game UI with market pulse, narrative votes, quick trade console, portfolio state, and culture/faction panels
+- Demo-mode API fallbacks for public deployments when database services are not configured
+- Simulated market engine, order execution route, leaderboard route, and guest-session route
+- Prisma-backed path for persistent sessions when a real database is connected
+
+## Public Demo Notes
+
+The hosted demo is intentionally a paper-trading prototype. It uses simulated prices and demo users. If the database is unavailable, public routes fall back to deterministic demo responses instead of throwing noisy 500s into the browser console.
+
+## Proof
+
+- Existing animated showcase: [showcase/echo-markets.gif](showcase/echo-markets.gif)
+- Desktop proof: [showcase/echo-markets-desktop.png](showcase/echo-markets-desktop.png)
+- Mobile proof: [showcase/echo-markets-mobile.png](showcase/echo-markets-mobile.png)
 
 ## Stack
 
-Next.js 15 · React 19 · TypeScript · Prisma · Redis · Jest
+Next.js 15, React 19, TypeScript, Prisma, Redis, Jest, Tailwind.
 
-## Quick start
-
-```bash
-npm install
-npm run db:generate
-npm run dev
-```
+## Run Locally
 
 ```bash
-npm run test          # unit + integration
-npm run build         # production build check
-npm run dev:ticker    # start market ticker
-npm run engine:orders # order matching engine
+corepack pnpm install
+corepack pnpm exec prisma generate
+corepack pnpm dev
 ```
 
-## Project layout
+Useful checks:
 
+```bash
+corepack pnpm test
+corepack pnpm build
+corepack pnpm dev:ticker
+corepack pnpm engine:orders
 ```
-app/          React pages and routes
+
+## Project Layout
+
+```text
+app/          Next.js app routes and screens
 components/   UI components
-contexts/     React contexts
+contexts/     React state providers
 hooks/        Custom hooks
-lib/          Shared utilities
+lib/          Market engine, auth helpers, DB helpers
 prisma/       Schema and migrations
-scripts/      Market engine scripts (ticker, matcher, narrator, bell)
+scripts/      Ticker, matcher, narrator, and setup scripts
+showcase/     Public proof media
 tests/        Unit and integration tests
 ```
 
 ## Status
 
-Beta. Market behavior is simulated — not real data, not real money. Package metadata still uses an older placeholder name.
-
-## Next
-
-- Real market data feeds
-- Multi-user lobbies
-- Historical replay mode
-- Strategy backtesting
+Beta. Market behavior is simulated, API fallbacks are demo-mode by design, and the project should not be described as real trading infrastructure.

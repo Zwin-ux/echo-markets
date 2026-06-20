@@ -8,6 +8,7 @@ import { marketEngine } from '@/lib/market-engine'
 import { marketEventSystem } from '@/lib/market-events'
 import EnhancedDatabaseService from '@/lib/enhanced-db'
 import { SymbolTicker } from '@/lib/types'
+import { createDemoMarketState } from '@/lib/demo-responses'
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,14 +59,14 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Market state API error:', error)
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch market state' 
-      },
-      { status: 500 }
-    )
+    console.warn('Market state API fell back to demo mode:', error)
+    const { searchParams } = new URL(request.url)
+    const symbols = searchParams.get('symbols')?.split(',') || undefined
+
+    return NextResponse.json({
+      success: true,
+      data: createDemoMarketState(symbols)
+    })
   }
 }
 

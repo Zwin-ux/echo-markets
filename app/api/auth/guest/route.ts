@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateRandomAvatar, generateGuestUsername, generateSessionToken, getSessionExpiry } from '@/lib/auth'
+import { createDemoGuestSession } from '@/lib/demo-responses'
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,10 +66,7 @@ export async function POST(request: NextRequest) {
       expires_at
     })
   } catch (error) {
-    console.error('[auth] Guest creation failed:', error)
-    return NextResponse.json(
-      { message: 'Failed to create guest account' },
-      { status: 500 }
-    )
+    console.warn('[auth] Guest creation fell back to demo mode:', error)
+    return NextResponse.json(createDemoGuestSession())
   }
 }
