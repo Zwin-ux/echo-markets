@@ -940,15 +940,15 @@ export default function GamePage() {
         <div className="max-w-7xl mx-auto px-3 py-3 sm:px-4 sm:py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center space-x-3 sm:space-x-4">
             <Image
-              src="/LATTICE Logo in Neon Turquoise.png"
+              src="/echo-mark.svg"
               alt="Echo Markets"
-              width={40}
-              height={40}
-              className="brightness-125"
+              width={36}
+              height={36}
+              className="opacity-95"
             />
             <div>
               <h1 className="text-xl font-bold text-cyan-400 sm:text-2xl">Echo Markets</h1>
-              <p className="text-[11px] leading-4 text-gray-400 sm:text-xs">Emotion-priced markets. Culture is the index.</p>
+              <p className="text-[11px] leading-4 text-gray-400 sm:text-xs">Simulation console for culture-priced assets.</p>
             </div>
           </div>
 
