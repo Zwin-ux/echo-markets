@@ -2,7 +2,7 @@
 
 Paper-trading interface for market psychology and portfolio rehearsal.
 
-Live demo: https://lattice-trading.vercel.app
+Live demo: https://echo-markets-production.up.railway.app
 
 ![Echo Markets demo](showcase/echo-markets.gif)
 
