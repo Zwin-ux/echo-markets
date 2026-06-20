@@ -990,6 +990,15 @@ body:has(.arcade-stage) .fixed.right-4.bottom-4.z-50 {
   transform: none;
 }
 
+.arcade-action-button:disabled,
+.arcade-action-button:disabled:hover {
+  border-color: rgba(184, 159, 119, 0.22);
+  background: linear-gradient(180deg, rgba(86, 62, 38, 0.58), rgba(24, 14, 18, 0.92));
+  color: rgba(244, 220, 166, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(255, 230, 109, 0.08);
+  opacity: 1;
+}
+
 .arcade-specials {
   display: grid;
   gap: 0.65rem;
