@@ -5,6 +5,6 @@
     "buildCommand": "export DATABASE_URL=\"${DATABASE_URL:-postgresql://echo:echo@localhost:5432/echo_markets}\" DIRECT_URL=\"${DIRECT_URL:-postgresql://echo:echo@localhost:5432/echo_markets}\" && pnpm exec prisma generate && pnpm run build"
   },
   "deploy": {
-    "startCommand": "pnpm run start"
+    "startCommand": "export DATABASE_URL=\"${DATABASE_URL:-postgresql://echo:echo@localhost:5432/echo_markets}\" DIRECT_URL=\"${DIRECT_URL:-postgresql://echo:echo@localhost:5432/echo_markets}\" && pnpm run start"
   }
 }
