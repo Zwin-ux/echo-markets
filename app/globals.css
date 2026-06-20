@@ -209,3 +209,970 @@ body {
 main svg {
   opacity: 0.82;
 }
+
+/* Echo Markets arcade cabinet */
+.arcade-stage {
+  --arcade-bg: #07030b;
+  --arcade-ink: #fff2b8;
+  --arcade-muted: #b89f77;
+  --arcade-red: #ff3355;
+  --arcade-orange: #ff9f1c;
+  --arcade-yellow: #ffe66d;
+  --arcade-green: #24f28c;
+  --arcade-blue: #39c8ff;
+  --arcade-violet: #9c6cff;
+  --arcade-panel: rgba(13, 8, 18, 0.92);
+  --arcade-line: rgba(255, 230, 109, 0.28);
+  position: relative;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 51, 85, 0.18), transparent 34rem),
+    radial-gradient(circle at 88% 6%, rgba(57, 200, 255, 0.18), transparent 30rem),
+    linear-gradient(135deg, #07030b 0%, #110715 52%, #08020a 100%);
+  color: var(--arcade-ink);
+  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
+  letter-spacing: 0;
+}
+
+.arcade-stage button,
+.arcade-stage input {
+  font-family: inherit;
+}
+
+body:has(.arcade-stage) .fixed.right-4.bottom-4.z-50 {
+  display: none;
+}
+
+.arcade-scanline {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, transparent, rgba(255, 230, 109, 0.04), transparent);
+  background-size: 100% 4px, 56px 100%;
+  mix-blend-mode: screen;
+}
+
+.arcade-cabinet {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(255, 230, 109, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 230, 109, 0.12), transparent 13rem),
+    rgba(5, 3, 9, 0.92);
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.58),
+    inset 0 0 0 6px rgba(255, 159, 28, 0.08),
+    inset 0 0 40px rgba(255, 51, 85, 0.08);
+}
+
+.arcade-cabinet::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  pointer-events: none;
+  border: 1px solid rgba(57, 200, 255, 0.16);
+}
+
+.arcade-marquee {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 2px solid rgba(255, 230, 109, 0.36);
+  background:
+    linear-gradient(90deg, rgba(255, 51, 85, 0.38), rgba(255, 159, 28, 0.18) 42%, rgba(57, 200, 255, 0.18)),
+    #130711;
+}
+
+.arcade-mark {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  border: 2px solid rgba(255, 230, 109, 0.55);
+  background: #08040b;
+  box-shadow: inset 0 0 0 4px rgba(57, 200, 255, 0.08);
+}
+
+.arcade-kicker {
+  display: block;
+  color: var(--arcade-yellow);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.arcade-title {
+  margin: 0;
+  color: #fff8d6;
+  font-size: clamp(1.8rem, 5vw, 4.8rem);
+  font-weight: 900;
+  line-height: 0.9;
+  text-transform: uppercase;
+  text-shadow: 4px 4px 0 #240713, 0 0 22px rgba(255, 230, 109, 0.36);
+}
+
+.arcade-scoreboard {
+  display: grid;
+  min-width: min(100%, 34rem);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.arcade-scoreboard > div,
+.arcade-control-score,
+.arcade-result-metrics > div,
+.arcade-bank-grid > div {
+  border: 1px solid rgba(255, 230, 109, 0.25);
+  background: rgba(0, 0, 0, 0.44);
+  padding: 0.62rem;
+  box-shadow: inset 0 -3px 0 rgba(255, 159, 28, 0.12);
+}
+
+.arcade-scoreboard span,
+.arcade-control-score span,
+.arcade-result-metrics span,
+.arcade-bank-grid span {
+  display: block;
+  color: var(--arcade-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.arcade-scoreboard strong,
+.arcade-control-score strong,
+.arcade-result-metrics strong,
+.arcade-bank-grid strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #fff8d6;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.arcade-good {
+  color: var(--arcade-green) !important;
+}
+
+.arcade-bad {
+  color: var(--arcade-red) !important;
+}
+
+.arcade-ticker {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(255, 230, 109, 0.26);
+  background: #060308;
+  padding: 0.55rem 0.75rem;
+  white-space: nowrap;
+}
+
+.arcade-ticker > span {
+  color: var(--arcade-orange);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.arcade-ticker button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(57, 200, 255, 0.22);
+  background: rgba(57, 200, 255, 0.06);
+  color: #dff8ff;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.arcade-ticker button:hover,
+.arcade-ticker button.is-active {
+  border-color: rgba(255, 230, 109, 0.72);
+  background: rgba(255, 230, 109, 0.13);
+  color: var(--arcade-yellow);
+}
+
+.arcade-modebar {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 2px solid rgba(255, 230, 109, 0.28);
+  background: #100713;
+}
+
+.arcade-modebar button {
+  min-height: 3rem;
+  border: 0;
+  border-right: 1px solid rgba(255, 230, 109, 0.18);
+  background: transparent;
+  color: var(--arcade-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.arcade-modebar button.is-active {
+  background: linear-gradient(180deg, rgba(255, 230, 109, 0.18), rgba(255, 51, 85, 0.1));
+  color: #fff8d6;
+  box-shadow: inset 0 -4px 0 var(--arcade-yellow);
+}
+
+.arcade-playfield,
+.arcade-ledger-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.38fr);
+  padding: 1rem;
+}
+
+.arcade-ledger-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.arcade-screen,
+.arcade-control-deck,
+.arcade-stick-panel,
+.arcade-specials {
+  border: 2px solid rgba(57, 200, 255, 0.32);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(57, 200, 255, 0.12), transparent 24rem),
+    var(--arcade-panel);
+  box-shadow: inset 0 0 0 4px rgba(255, 230, 109, 0.04);
+}
+
+.arcade-screen {
+  min-width: 0;
+  padding: 1rem;
+}
+
+.arcade-control-deck {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  border-color: rgba(255, 159, 28, 0.36);
+  background:
+    linear-gradient(180deg, rgba(255, 159, 28, 0.12), transparent 22rem),
+    rgba(12, 5, 10, 0.94);
+}
+
+.arcade-stick-panel,
+.arcade-specials {
+  border: 0;
+  border-bottom: 2px solid rgba(255, 230, 109, 0.18);
+  padding: 1rem;
+  box-shadow: none;
+}
+
+.arcade-screen-head,
+.arcade-panel-title {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.arcade-screen-head h2,
+.arcade-panel-title h3,
+.arcade-result-strip h3 {
+  margin: 0.12rem 0 0;
+  color: #fff8d6;
+  font-weight: 900;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.arcade-screen-head h2 {
+  font-size: clamp(1.55rem, 3.4vw, 2.85rem);
+}
+
+.arcade-panel-title h3 {
+  font-size: 1.2rem;
+}
+
+.arcade-mission-lamps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.arcade-mission-lamps > div {
+  position: relative;
+  min-height: 6rem;
+  border: 1px solid rgba(255, 230, 109, 0.22);
+  background: rgba(0, 0, 0, 0.34);
+  padding: 0.8rem 2.2rem 0.8rem 0.8rem;
+}
+
+.arcade-mission-lamps span:first-child {
+  color: var(--arcade-orange);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.arcade-mission-lamps strong {
+  display: block;
+  color: #fff8d6;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+
+.arcade-mission-lamps p {
+  margin-top: 0.35rem;
+  color: var(--arcade-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.arcade-mission-lamps svg,
+.arcade-lamp {
+  position: absolute;
+  right: 0.75rem;
+  top: 0.75rem;
+}
+
+.arcade-lamp {
+  width: 0.82rem;
+  height: 0.82rem;
+  border-radius: 999px;
+  background: rgba(255, 230, 109, 0.22);
+  box-shadow: 0 0 14px rgba(255, 230, 109, 0.12);
+}
+
+.arcade-mission-lamps .is-done {
+  border-color: rgba(36, 242, 140, 0.48);
+  background: rgba(36, 242, 140, 0.08);
+}
+
+.arcade-result-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.8fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(255, 230, 109, 0.25);
+  background: rgba(0, 0, 0, 0.34);
+  padding: 0.85rem;
+}
+
+.arcade-result-strip p,
+.arcade-story-board > p,
+.arcade-selected-stock > p,
+.arcade-feed-row p,
+.arcade-ledger-panel p,
+.arcade-lore-grid p {
+  color: #f4dca6;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.arcade-result-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.arcade-affected {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  color: var(--arcade-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.arcade-affected b,
+.arcade-tags span,
+.arcade-sector {
+  border: 1px solid rgba(255, 230, 109, 0.3);
+  color: var(--arcade-yellow);
+  padding: 0.18rem 0.42rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.arcade-affected em {
+  margin-left: auto;
+  color: var(--arcade-blue);
+  font-style: normal;
+}
+
+.arcade-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.98fr) minmax(360px, 0.86fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.arcade-story-board,
+.arcade-market-board,
+.arcade-rumor-feed,
+.arcade-ledger-panel {
+  border: 1px solid rgba(255, 230, 109, 0.22);
+  background: rgba(0, 0, 0, 0.26);
+  padding: 0.9rem;
+}
+
+.arcade-clock,
+.arcade-market-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  color: var(--arcade-blue);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.arcade-tags,
+.arcade-choice-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.arcade-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.arcade-choice,
+.arcade-stock-list button,
+.arcade-specials button,
+.arcade-coin-grid button,
+.arcade-buy-sell button,
+.arcade-action-button {
+  border: 1px solid rgba(255, 230, 109, 0.26);
+  background: rgba(18, 8, 16, 0.84);
+  color: #fff8d6;
+  transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.arcade-choice:hover,
+.arcade-stock-list button:hover,
+.arcade-specials button:hover,
+.arcade-coin-grid button:hover,
+.arcade-buy-sell button:hover,
+.arcade-action-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 230, 109, 0.68);
+  background: rgba(255, 230, 109, 0.1);
+}
+
+.arcade-choice:focus-visible,
+.arcade-stock-list button:focus-visible,
+.arcade-specials button:focus-visible,
+.arcade-coin-grid button:focus-visible,
+.arcade-buy-sell button:focus-visible,
+.arcade-action-button:focus-visible,
+.arcade-modebar button:focus-visible,
+.arcade-ticker button:focus-visible {
+  outline: 2px solid var(--arcade-yellow);
+  outline-offset: 2px;
+}
+
+.arcade-choice {
+  min-height: 10rem;
+  padding: 0.9rem;
+  text-align: left;
+}
+
+.arcade-choice-key {
+  display: inline-flex;
+  min-width: 2rem;
+  justify-content: center;
+  border: 1px solid rgba(255, 51, 85, 0.42);
+  color: var(--arcade-red);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.arcade-choice strong {
+  display: block;
+  margin-top: 0.55rem;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+}
+
+.arcade-choice p {
+  margin-top: 0.45rem;
+  color: #f4dca6;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.arcade-choice-stats span {
+  color: var(--arcade-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.arcade-choice-bar,
+.arcade-momentum {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.arcade-choice-bar {
+  height: 0.3rem;
+  margin-top: 0.65rem;
+}
+
+.arcade-choice-bar i,
+.arcade-momentum i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--arcade-red), var(--arcade-yellow));
+}
+
+.arcade-stock-list {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.arcade-stock-list button {
+  display: grid;
+  grid-template-columns: 4.8rem minmax(0, 1fr) 7.6rem;
+  gap: 0.35rem 0.65rem;
+  align-items: center;
+  padding: 0.7rem;
+  text-align: left;
+}
+
+.arcade-stock-list button.is-active {
+  border-color: rgba(57, 200, 255, 0.78);
+  background: rgba(57, 200, 255, 0.11);
+  box-shadow: inset 4px 0 0 var(--arcade-blue);
+}
+
+.arcade-symbol,
+.arcade-price {
+  color: #fff8d6;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.arcade-symbol {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.arcade-price {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.arcade-stock-name {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  color: #f4dca6;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arcade-stock-list .arcade-sector {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.arcade-stock-list .arcade-good,
+.arcade-stock-list .arcade-bad {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.arcade-momentum {
+  grid-column: 3;
+  grid-row: 2;
+  display: flex;
+  height: 1.35rem;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.35rem;
+  color: #fff8d6;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.arcade-momentum i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  opacity: 0.52;
+}
+
+.arcade-feed-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.arcade-feed-row article,
+.arcade-ledger-panel article,
+.arcade-lore-grid article {
+  border: 1px solid rgba(255, 230, 109, 0.18);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 0.72rem;
+}
+
+.arcade-feed-row span,
+.arcade-feed-row em,
+.arcade-ledger-panel span,
+.arcade-lore-grid em {
+  color: var(--arcade-muted);
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.arcade-feed-row strong,
+.arcade-ledger-panel strong,
+.arcade-lore-grid strong {
+  display: block;
+  color: #fff8d6;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.arcade-stock-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(255, 230, 109, 0.24);
+  background: rgba(0, 0, 0, 0.38);
+  padding: 0.8rem;
+}
+
+.arcade-stock-card strong {
+  display: block;
+  color: #fff8d6;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.arcade-stock-card span {
+  display: block;
+  color: var(--arcade-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.arcade-bank-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.arcade-buy-sell {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.arcade-buy-sell button,
+.arcade-action-button {
+  min-height: 3.15rem;
+  font-size: 1rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.arcade-buy-sell .buy.is-active {
+  border-color: rgba(36, 242, 140, 0.7);
+  background: rgba(36, 242, 140, 0.18);
+  color: var(--arcade-green);
+}
+
+.arcade-buy-sell .sell.is-active {
+  border-color: rgba(255, 51, 85, 0.72);
+  background: rgba(255, 51, 85, 0.18);
+  color: var(--arcade-red);
+}
+
+.arcade-input-label,
+.arcade-share-estimate {
+  display: block;
+  margin-top: 0.75rem;
+  color: var(--arcade-yellow);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.arcade-input {
+  height: 3rem !important;
+  margin-top: 0.35rem;
+  border: 1px solid rgba(255, 230, 109, 0.34) !important;
+  background: rgba(0, 0, 0, 0.54) !important;
+  color: #fff8d6 !important;
+  font-size: 1rem !important;
+}
+
+.arcade-input::placeholder {
+  color: rgba(244, 220, 166, 0.48);
+}
+
+.arcade-coin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.arcade-coin-grid button {
+  min-height: 3.6rem;
+  color: #fff8d6;
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.arcade-coin-grid button span {
+  display: block;
+  color: var(--arcade-orange);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.arcade-action-button {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-color: rgba(255, 230, 109, 0.74);
+  background: linear-gradient(180deg, var(--arcade-yellow), var(--arcade-orange));
+  color: #1b0711;
+  box-shadow: 0 5px 0 #6a2c08;
+}
+
+.arcade-action-button:disabled,
+.arcade-coin-grid button:disabled,
+.arcade-specials button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
+
+.arcade-specials {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.arcade-specials button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.72rem;
+  text-align: left;
+}
+
+.arcade-specials strong {
+  display: block;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.arcade-specials em {
+  display: block;
+  color: var(--arcade-muted);
+  font-size: 0.78rem;
+  font-style: normal;
+  line-height: 1.35;
+}
+
+.arcade-specials b {
+  color: var(--arcade-yellow);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.arcade-empty {
+  border: 1px dashed rgba(255, 230, 109, 0.3);
+  color: var(--arcade-muted);
+  padding: 1rem;
+}
+
+.arcade-ledger-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.8fr;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.arcade-ledger-panel h3 {
+  margin: 0 0 0.75rem;
+  color: var(--arcade-yellow);
+  font-size: 1rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.arcade-ledger-panel {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+}
+
+.arcade-ledger-panel article b {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.84rem;
+}
+
+.arcade-lore-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.arcade-lore-grid article {
+  min-height: 12rem;
+}
+
+.arcade-lore-grid svg {
+  color: var(--arcade-orange);
+}
+
+@media (max-width: 1120px) {
+  .arcade-main-grid,
+  .arcade-playfield {
+    grid-template-columns: 1fr;
+  }
+
+  .arcade-control-deck {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .arcade-feed-row,
+  .arcade-ledger-columns,
+  .arcade-lore-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .arcade-marquee,
+  .arcade-screen-head,
+  .arcade-panel-title,
+  .arcade-result-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .arcade-marquee {
+    display: grid;
+  }
+
+  .arcade-scoreboard,
+  .arcade-mission-lamps,
+  .arcade-choice-grid,
+  .arcade-control-deck,
+  .arcade-ledger-columns,
+  .arcade-lore-grid,
+  .arcade-feed-row {
+    grid-template-columns: 1fr;
+  }
+
+  .arcade-playfield,
+  .arcade-ledger-grid {
+    padding: 0.55rem;
+  }
+
+  .arcade-screen,
+  .arcade-stick-panel,
+  .arcade-specials {
+    padding: 0.75rem;
+  }
+
+  .arcade-modebar button {
+    min-height: 3.35rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+  }
+
+  .arcade-result-metrics,
+  .arcade-bank-grid,
+  .arcade-coin-grid,
+  .arcade-buy-sell {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .arcade-stock-list button {
+    grid-template-columns: 4.6rem minmax(0, 1fr);
+  }
+
+  .arcade-stock-list .arcade-sector,
+  .arcade-stock-list .arcade-momentum {
+    grid-column: 2;
+    justify-self: stretch;
+  }
+
+  .arcade-stock-list .arcade-sector {
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .arcade-stock-list .arcade-good,
+  .arcade-stock-list .arcade-bad {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .arcade-stock-list .arcade-momentum {
+    grid-row: 3;
+  }
+
+  .arcade-price {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-choice,
+  .arcade-stock-list button,
+  .arcade-specials button,
+  .arcade-coin-grid button,
+  .arcade-buy-sell button,
+  .arcade-action-button {
+    transition: none;
+  }
+}

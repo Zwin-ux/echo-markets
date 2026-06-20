@@ -11,8 +11,8 @@ import { MarketPricesProvider } from '@/contexts/market-prices-context'
 import { CommandProvider } from '@/contexts/command-context'
 
 export const metadata: Metadata = {
-  title: 'Lattice Trading',
-  description: 'Virtual trading platform with real-time market simulation',
+  title: 'Echo Markets',
+  description: 'Arcade market game for trading culture-priced assets.',
   icons: {
     icon: '/favicon.ico',
   }

@@ -37,13 +37,7 @@ import {
   ClipboardList
 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface Stock {
   symbol: string
@@ -464,6 +458,13 @@ function formatMoveList(adjustments?: Record<string, number>) {
     .join(" / ")
 }
 
+function formatMoney(value: number, maximumFractionDigits = 0) {
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits,
+    minimumFractionDigits: maximumFractionDigits
+  })
+}
+
 export default function GamePage() {
   const [stocks, setStocks] = useState<Stock[]>(INITIAL_STOCKS)
   const [player, setPlayer] = useState<Player>({
@@ -510,6 +511,12 @@ export default function GamePage() {
 
   const stocksRef = useRef(stocks)
   const dramaRef = useRef(dramaScore)
+  const eventSequenceRef = useRef(0)
+
+  const uniqueId = useCallback((prefix: string) => {
+    eventSequenceRef.current += 1
+    return `${prefix}-${Date.now()}-${eventSequenceRef.current}`
+  }, [])
 
   const currentBeat = useMemo(
     () => STORY_BEATS.find((beat) => beat.id === currentBeatId) ?? STORY_BEATS[0],
@@ -593,6 +600,10 @@ export default function GamePage() {
     setNotifications((prev) => [message, ...prev].slice(0, 6))
   }, [])
 
+  const setQuickOrderAmount = useCallback((amount: number) => {
+    setOrderAmount(amount > 0 ? String(amount) : "")
+  }, [])
+
   const updatePlayerValue = useCallback((nextTotal: number) => {
     setPlayer((prev) => {
       const nextDayChange = nextTotal - PLAYER_STARTING_VALUE
@@ -645,7 +656,7 @@ export default function GamePage() {
 
       if (option.effect.rumor) {
         const rumorEvent: MarketEvent = {
-          id: `rumor-${timestamp.getTime()}`,
+          id: uniqueId("rumor"),
           title: option.effect.rumor,
           description: `${currentBeat.title} community vote resolved: ${option.label}.`,
           tone: option.effect.drama >= 0 ? "hype" : "scheming",
@@ -661,7 +672,7 @@ export default function GamePage() {
       setInfluence((prev) => prev + option.effect.influence)
       setCombo((prev) => prev + 1)
       setLastOutcome({
-        id: `story-outcome-${timestamp.getTime()}`,
+        id: uniqueId("story-outcome"),
         type: "story",
         headline: `Beat resolved: ${option.label}`,
         detail: option.effect.rumor ?? `${currentBeat.title} resolved and pushed the market into a new beat.`,
@@ -675,7 +686,7 @@ export default function GamePage() {
       })
 
       registerAction({
-        id: `story-${timestamp.getTime()}`,
+        id: uniqueId("story"),
         type: "story",
         text: `Community steered the arc: ${option.label}. Influence ripples through the floor.`,
         timestamp
@@ -693,7 +704,7 @@ export default function GamePage() {
         setCurrentBeatId(fallback.id)
       }
     },
-    [applyStockMomentum, currentBeat, pushNotification, registerAction]
+    [applyStockMomentum, currentBeat, pushNotification, registerAction, uniqueId]
   )
 
   const tallyNarrative = useCallback(() => {
@@ -727,7 +738,7 @@ export default function GamePage() {
 
       setInfluence((prev) => prev + 1)
       setLastOutcome({
-        id: `vote-outcome-${Date.now()}`,
+        id: uniqueId("vote-outcome"),
         type: "vote",
         headline: `Vote locked: ${option.label}`,
         detail: `${voteShare}% of current votes now point here. If this wins, ${formatMoveList(option.effect.momentumShift).toLowerCase()}.`,
@@ -741,13 +752,13 @@ export default function GamePage() {
       })
 
       registerAction({
-        id: `vote-${Date.now()}`,
+        id: uniqueId("vote"),
         type: "story",
         text: `You cast your vote for "${option.label}". Narrative gravity shifts.`,
         timestamp: new Date()
       })
     },
-    [communityVotes, registerAction, totalVotes]
+    [communityVotes, registerAction, totalVotes, uniqueId]
   )
 
   const handleImpulse = useCallback(
@@ -770,7 +781,7 @@ export default function GamePage() {
       setCombo((prev) => prev + 1)
       setImpulseCooldowns((prev) => ({ ...prev, [impulse.id]: impulse.cooldown }))
       setLastOutcome({
-        id: `impulse-outcome-${timestamp.getTime()}`,
+        id: uniqueId("impulse-outcome"),
         type: "impulse",
         headline: `Impulse fired: ${impulse.label}`,
         detail: `${impulse.effect.sentiment.toUpperCase()} sentiment is now active. ${formatMoveList(impulse.effect.boost)}.`,
@@ -784,7 +795,7 @@ export default function GamePage() {
       })
 
       const event: MarketEvent = {
-        id: `impulse-${timestamp.getTime()}`,
+        id: uniqueId("impulse"),
         title: `${impulse.label} detonated`,
         description: impulse.description,
         tone: impulse.effect.sentiment === "panic" ? "panic" : "hype",
@@ -796,13 +807,13 @@ export default function GamePage() {
       setMarketEvents((prev) => [event, ...prev].slice(0, 8))
 
       registerAction({
-        id: `impulse-${timestamp.getTime()}`,
+        id: uniqueId("impulse-action"),
         type: "impulse",
         text: `${impulse.label} ripples through the pit. ${impulse.effect.sentiment.toUpperCase()} spreads.`,
         timestamp
       })
     },
-    [applyStockMomentum, impulseCooldowns, pushNotification, registerAction]
+    [applyStockMomentum, impulseCooldowns, pushNotification, registerAction, uniqueId]
   )
 
   const handleExecuteOrder = useCallback(async (amountOverride?: number) => {
@@ -814,7 +825,7 @@ export default function GamePage() {
 
     if (estimatedShares <= 0) {
       setLastOutcome({
-        id: `trade-reject-${timestamp.getTime()}`,
+        id: uniqueId("trade-reject"),
         type: "trade",
         headline: "Order rejected: size too small",
         detail: `${selectedStock.symbol} is trading at $${selectedStock.price.toFixed(2)}. The order needs enough cash to buy or sell at least one share.`,
@@ -831,7 +842,7 @@ export default function GamePage() {
 
     if (orderType === "buy" && numericAmount > cash) {
       setLastOutcome({
-        id: `trade-reject-${timestamp.getTime()}`,
+        id: uniqueId("trade-reject"),
         type: "trade",
         headline: "Order rejected: cash limit",
         detail: `You tried to route $${numericAmount.toFixed(0)} with $${cash.toFixed(0)} cash available.`,
@@ -848,7 +859,7 @@ export default function GamePage() {
 
     if (orderType === "sell" && (!selectedHolding || selectedHolding.shares < estimatedShares)) {
       setLastOutcome({
-        id: `trade-reject-${timestamp.getTime()}`,
+        id: uniqueId("trade-reject"),
         type: "trade",
         headline: "Order rejected: no borrow in demo",
         detail: `You hold ${selectedHolding?.shares ?? 0} ${selectedStock.symbol} shares and tried to sell about ${estimatedShares}.`,
@@ -882,7 +893,7 @@ export default function GamePage() {
       if (!response.ok || !payload.success) {
         pushNotification(`Trade failed: ${payload.error ?? "Unknown error"}`)
         setLastOutcome({
-          id: `trade-failed-${Date.now()}`,
+          id: uniqueId("trade-failed"),
           type: "trade",
           headline: "Order failed",
           detail: payload.error ?? "The order service did not return a fill.",
@@ -997,7 +1008,7 @@ export default function GamePage() {
       console.error("Trade execution failed", error)
       pushNotification("Trade failed: network error")
       setLastOutcome({
-        id: `trade-network-${Date.now()}`,
+        id: uniqueId("trade-network"),
         type: "trade",
         headline: "Order failed: network",
         detail: "The client could not reach the trade route.",
@@ -1008,7 +1019,7 @@ export default function GamePage() {
     } finally {
       setIsExecutingOrder(false)
     }
-  }, [cash, orderAmount, orderType, player.id, pushNotification, registerAction, selectedHolding, selectedStock])
+  }, [cash, orderAmount, orderType, player.id, pushNotification, registerAction, selectedHolding, selectedStock, uniqueId])
 
   useEffect(() => {
     updatePlayerValue(Math.round(portfolioValue))
@@ -1118,7 +1129,7 @@ export default function GamePage() {
 
       setMarketEvents((prev) => [
         {
-          id: `ambient-${timestamp.getTime()}`,
+          id: uniqueId("ambient"),
           title: rumorSeed[Math.floor(Math.random() * rumorSeed.length)],
           description: `${affected.symbol} reacts with a twitch.`,
           tone: "mystery",
@@ -1130,7 +1141,7 @@ export default function GamePage() {
       ].slice(0, 8))
 
       registerAction({
-        id: `ambient-${timestamp.getTime()}`,
+        id: uniqueId("ambient-action"),
         type: "system",
         text: `Rumor ticker pinged ${affected.symbol}.`,
         timestamp
@@ -1138,7 +1149,7 @@ export default function GamePage() {
     }, 22000)
 
     return () => clearInterval(interval)
-  }, [registerAction])
+  }, [registerAction, uniqueId])
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -1171,782 +1182,489 @@ export default function GamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-cyan-300 font-mono">
-      <header className="border-b border-cyan-500/30 bg-gray-950/70">
-        <div className="max-w-7xl mx-auto px-3 py-3 sm:px-4 sm:py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            <Image
-              src="/echo-mark.svg"
-              alt="Echo Markets"
-              width={36}
-              height={36}
-              className="opacity-95"
-            />
-            <div>
-              <h1 className="text-xl font-bold text-cyan-400 sm:text-2xl">Echo Markets</h1>
-              <p className="text-[11px] leading-4 text-gray-400 sm:text-xs">Simulation console for culture-priced assets.</p>
-            </div>
-          </div>
-
-          <div className="grid w-full grid-cols-[0.75fr_1fr_1.35fr] gap-2 text-left sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-6">
-            <div className="flex min-w-0 items-center space-x-2 rounded border border-cyan-500/20 bg-black/30 px-2 py-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
-              <Crown className="w-4 h-4 text-yellow-400" />
-              <span className="text-yellow-400 text-sm">#{player.rank}</span>
-            </div>
-            <div className="flex min-w-0 items-center space-x-2 rounded border border-cyan-500/20 bg-black/30 px-2 py-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
-              <Star className="w-4 h-4 text-purple-400" />
-              <span className="text-purple-300 text-sm">Lv.{player.level}</span>
-              <Progress value={(player.xp % 1000) / 10} className="h-2 min-w-0 flex-1 bg-gray-800 sm:w-20 sm:flex-none" />
-            </div>
-            <div className="min-w-0 rounded border border-cyan-500/20 bg-black/30 px-2 py-2 sm:col-span-1 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-right">
-              <div className="truncate text-[10px] uppercase tracking-[0.08em] text-gray-400 sm:text-xs sm:normal-case sm:tracking-normal">Portfolio Power</div>
-              <div className="truncate text-base text-cyan-200 font-bold sm:text-lg">${portfolioValue.toLocaleString()}</div>
-              <div className={`text-xs ${player.dayChange >= 0 ? "text-green-400" : "text-red-400"}`}>
-                {player.dayChange >= 0 ? "+" : ""}${player.dayChange.toFixed(2)} today
+    <div className="arcade-stage min-h-screen overflow-hidden text-[#fff2b8]">
+      <div className="arcade-scanline" aria-hidden="true" />
+      <main className="relative mx-auto w-full max-w-[1500px] px-2 py-3 sm:px-4 sm:py-5">
+        <section className="arcade-cabinet">
+          <header className="arcade-marquee">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="arcade-mark">
+                <Image src="/echo-mark.svg" alt="Echo Markets" width={36} height={36} />
+              </div>
+              <div className="min-w-0">
+                <div className="arcade-kicker">Culture Exchange Cabinet</div>
+                <h1 className="arcade-title">Echo Markets</h1>
               </div>
             </div>
-            <div className="hidden items-center space-x-2 sm:flex">
-              <Bell className="w-4 h-4 text-cyan-300" />
-              {notifications.length > 0 && (
-                <Badge className="bg-red-500 text-white text-xs">{notifications.length}</Badge>
-              )}
+            <div className="arcade-scoreboard" aria-label="player status">
+              <div>
+                <span>Rank</span>
+                <strong>#{player.rank}</strong>
+              </div>
+              <div>
+                <span>Level</span>
+                <strong>{player.level}</strong>
+              </div>
+              <div>
+                <span>Bank</span>
+                <strong>${formatMoney(portfolioValue)}</strong>
+              </div>
+              <div>
+                <span>Today</span>
+                <strong className={player.dayChange >= 0 ? "arcade-good" : "arcade-bad"}>
+                  {player.dayChange >= 0 ? "+" : ""}${formatMoney(player.dayChange, 2)}
+                </strong>
+              </div>
             </div>
+          </header>
+
+          <div className="arcade-ticker" aria-label="live market ticker">
+            <span>LIVE TAPE</span>
+            {stocks.map((stock) => (
+              <button
+                key={`ticker-${stock.symbol}`}
+                type="button"
+                onClick={() => setSelectedStock(stock)}
+                className={selectedStock?.symbol === stock.symbol ? "is-active" : ""}
+              >
+                {stock.symbol} ${stock.price.toFixed(2)} {stock.changePercent >= 0 ? "+" : "-"}
+                {Math.abs(stock.changePercent).toFixed(1)}%
+              </button>
+            ))}
           </div>
-        </div>
-      </header>
 
-      <main className="mx-auto max-w-7xl space-y-3 px-3 py-3 sm:space-y-5 sm:px-4 sm:py-5">
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
-          <TabsList className="grid h-auto w-full grid-cols-3 bg-gray-900/70 border border-cyan-500/30 text-gray-400 sm:inline-flex sm:w-auto">
-            <TabsTrigger value="loop" className="min-h-11 px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:px-3 sm:text-sm">
-              <BarChart3 className="w-3.5 h-3.5 mr-1.5 sm:w-4 sm:h-4 sm:mr-2" /> Core Loop
-            </TabsTrigger>
-            <TabsTrigger value="portfolio" className="min-h-11 px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:px-3 sm:text-sm">
-              <PieChart className="w-3.5 h-3.5 mr-1.5 sm:w-4 sm:h-4 sm:mr-2" /> Portfolio
-            </TabsTrigger>
-            <TabsTrigger value="culture" className="min-h-11 px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:px-3 sm:text-sm">
-              <Users className="w-3.5 h-3.5 mr-1.5 sm:w-4 sm:h-4 sm:mr-2" /> Culture
-            </TabsTrigger>
-          </TabsList>
+          <nav className="arcade-modebar" aria-label="cabinet modes">
+            {[
+              { id: "loop", label: "Play Field", icon: BarChart3 },
+              { id: "portfolio", label: "Bank Roll", icon: PieChart },
+              { id: "culture", label: "Lore Board", icon: Users }
+            ].map((mode) => {
+              const Icon = mode.icon
+              const active = activeTab === mode.id
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setActiveTab(mode.id as typeof activeTab)}
+                  className={active ? "is-active" : ""}
+                >
+                  <Icon className="h-4 w-4" />
+                  {mode.label}
+                </button>
+              )
+            })}
+          </nav>
 
-          <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.72fr)]">
-            <Card className="border-cyan-500/40 bg-[#02070d]">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-3">
+          {activeTab === "loop" && (
+            <div className="arcade-playfield">
+              <section className="arcade-screen">
+                <div className="arcade-screen-head">
                   <div>
-                    <CardTitle className="flex items-center text-cyan-300 text-base">
-                      <ClipboardList className="mr-2 h-4 w-4" /> Session Brief
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Build a position, steer the story, then force the market to react.
-                    </CardDescription>
+                    <span className="arcade-kicker">Round Objective</span>
+                    <h2>Buy the rumor. Bend the tape.</h2>
                   </div>
-                  <Badge variant="outline" className="text-[10px] uppercase">
-                    Control {controlScore}
-                  </Badge>
+                  <div className="arcade-control-score">
+                    <span>Control</span>
+                    <strong>{controlScore}</strong>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="grid gap-2 px-4 pb-4 sm:grid-cols-3 sm:px-6">
-                {missionSteps.map((step, index) => (
-                  <div
-                    key={step.label}
-                    className={`border p-3 ${step.done ? "border-green-500/30 bg-green-500/10" : "border-cyan-500/20 bg-black/40"}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-cyan-100">{index + 1}. {step.label}</span>
-                      {step.done ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <span className="text-[10px] text-gray-500">OPEN</span>}
+
+                <div className="arcade-mission-lamps">
+                  {missionSteps.map((step, index) => (
+                    <div key={step.label} className={step.done ? "is-done" : ""}>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <strong>{step.label}</strong>
+                      <p>{step.detail}</p>
+                      {step.done ? <CheckCircle2 className="h-4 w-4" /> : <span className="arcade-lamp" />}
                     </div>
-                    <p className="mt-2 text-xs leading-5 text-gray-400">{step.detail}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                  ))}
+                </div>
 
-            <Card className="border-cyan-500/40 bg-[#02070d]">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-3">
+                <div className="arcade-result-strip">
                   <div>
-                    <CardTitle className="flex items-center text-cyan-300 text-base">
-                      <Activity className="mr-2 h-4 w-4" /> Last Result
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">{lastOutcome.nextStep}</CardDescription>
+                    <span className="arcade-kicker">Last Result</span>
+                    <h3>{lastOutcome.headline}</h3>
+                    <p>{lastOutcome.detail}</p>
                   </div>
-                  <Badge className="bg-cyan-600/40 text-[10px] uppercase">Combo {combo}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 px-4 pb-4 sm:px-6">
-                <div>
-                  <div className="text-sm font-semibold text-cyan-100">{lastOutcome.headline}</div>
-                  <p className="mt-1 text-xs leading-5 text-gray-400">{lastOutcome.detail}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {lastOutcome.metrics.map((metric) => (
-                    <div key={`${lastOutcome.id}-${metric.label}`} className="border border-cyan-500/20 bg-black/40 p-2">
-                      <div className="text-[10px] uppercase tracking-[0.08em] text-gray-500">{metric.label}</div>
-                      <div
-                        className={`mt-1 text-sm font-semibold ${
-                          metric.tone === "positive" ? "text-green-400" : metric.tone === "negative" ? "text-red-400" : "text-cyan-100"
-                        }`}
-                      >
-                        {metric.value}
+                  <div className="arcade-result-metrics">
+                    {lastOutcome.metrics.map((metric) => (
+                      <div key={`${lastOutcome.id}-${metric.label}`}>
+                        <span>{metric.label}</span>
+                        <strong className={metric.tone === "positive" ? "arcade-good" : metric.tone === "negative" ? "arcade-bad" : ""}>
+                          {metric.value}
+                        </strong>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                  <span>Affected</span>
-                  {(lastOutcome.affected.length ? lastOutcome.affected : ["none"]).map((symbol) => (
-                    <Badge key={`${lastOutcome.id}-${symbol}`} variant="outline" className="text-[10px] uppercase">
-                      {symbol}
-                    </Badge>
-                  ))}
-                  {nextMissionStep && <span className="ml-auto text-cyan-200">Next: {nextMissionStep.label}</span>}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <TabsContent value="loop" className="space-y-3 sm:space-y-5">
-            <div className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[minmax(0,1.7fr)_380px]">
-              <div className="contents xl:block xl:space-y-5">
-                <Card className="order-2 border-cyan-500/40 bg-[#02070d] shadow-[inset_0_1px_0_rgba(34,211,238,0.10)] xl:order-none">
-                  <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    ))}
                     <div>
-                      <CardTitle className="flex items-center text-cyan-300 text-lg">
-                        <Gavel className="w-5 h-5 mr-2" /> Narrative Pulse
-                      </CardTitle>
-                      <CardDescription className="text-gray-400">
-                        Vote on the next beat. Timer resets when the market decides.
-                      </CardDescription>
+                      <span>Combo</span>
+                      <strong>{combo}</strong>
                     </div>
-                    <div className="flex items-center gap-4 text-xs">
-                      <div className="flex items-center gap-1 text-cyan-200">
-                        <Timer className="w-4 h-4" /> {voteTimer}s
-                      </div>
-                      <div className="flex items-center gap-1 text-cyan-200">
-                        <Users className="w-4 h-4" /> {totalVotes} votes
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6">
-                    <div className="rounded-md border border-cyan-500/20 bg-black/40 p-3 sm:p-4">
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                        <Badge variant="outline" className="uppercase text-xs tracking-widest">
-                          {currentBeat.mood}
-                        </Badge>
-                        <div className="flex min-w-0 flex-wrap gap-x-2 gap-y-1 text-xs text-gray-400">
-                          {currentBeat.tags.map((tag) => (
-                            <span key={tag}>#{tag}</span>
-                          ))}
-                        </div>
-                      </div>
-                      <h2 className="text-lg text-cyan-200 mt-2 sm:text-xl">{currentBeat.title}</h2>
-                      <p className="line-clamp-2 text-sm text-gray-300 mt-2 leading-5 sm:leading-relaxed">{currentBeat.synopsis}</p>
-                    </div>
+                  </div>
+                  <div className="arcade-affected">
+                    <span>Target</span>
+                    {(lastOutcome.affected.length ? lastOutcome.affected : ["none"]).map((symbol) => (
+                      <b key={`${lastOutcome.id}-${symbol}`}>{symbol}</b>
+                    ))}
+                    {nextMissionStep && <em>Next: {nextMissionStep.label}</em>}
+                  </div>
+                </div>
 
-                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 sm:gap-3">
-                      {currentBeat.options.map((option) => {
+                <div className="arcade-main-grid">
+                  <section className="arcade-story-board">
+                    <div className="arcade-panel-title">
+                      <div>
+                        <span className="arcade-kicker">Story Battle</span>
+                        <h3>{currentBeat.title}</h3>
+                      </div>
+                      <div className="arcade-clock">
+                        <Timer className="h-4 w-4" />
+                        {voteTimer}s
+                        <Users className="h-4 w-4" />
+                        {totalVotes}
+                      </div>
+                    </div>
+                    <p>{currentBeat.synopsis}</p>
+                    <div className="arcade-tags">
+                      <span>{currentBeat.mood}</span>
+                      {currentBeat.tags.map((tag) => (
+                        <span key={tag}>#{tag}</span>
+                      ))}
+                    </div>
+                    <div className="arcade-choice-grid">
+                      {currentBeat.options.map((option, index) => {
                         const votes = communityVotes[option.id] ?? 0
                         const share = totalVotes ? Math.round((votes / totalVotes) * 100) : 0
                         return (
                           <button
                             key={option.id}
+                            type="button"
                             onClick={() => handleVote(option)}
-                            className="group relative min-h-[104px] rounded-md border border-cyan-500/20 bg-black/40 p-3 text-left transition hover:border-cyan-400 active:border-cyan-300 active:bg-cyan-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:min-h-[132px] sm:p-4"
+                            className="arcade-choice"
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="font-semibold text-cyan-200 leading-5">{option.label}</div>
-                              <Badge className="bg-cyan-600/80 text-black text-xs">{votes} votes</Badge>
+                            <span className="arcade-choice-key">P{index + 1}</span>
+                            <strong>{option.label}</strong>
+                            <p>{option.description}</p>
+                            <div className="arcade-choice-stats">
+                              <span>Drama {signedNumber(option.effect.drama)}</span>
+                              <span>Influence +{option.effect.influence}</span>
+                              <span>{votes} votes</span>
                             </div>
-                            <p className="line-clamp-2 text-sm text-gray-300 mt-2 leading-5 sm:leading-relaxed">{option.description}</p>
-                            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
-                              <div className="flex items-center gap-2">
-                                <Flame className="w-3 h-3 text-orange-400" /> Drama {option.effect.drama >= 0 ? "+" : ""}{option.effect.drama}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Star className="w-3 h-3 text-purple-400" /> Influence +{option.effect.influence}
-                              </div>
-                              {share > 0 && <Progress value={share} className="h-1 bg-gray-800" />}
+                            <div className="arcade-choice-bar">
+                              <i style={{ width: `${share}%` }} />
                             </div>
                           </button>
                         )
                       })}
                     </div>
-                  </CardContent>
-                </Card>
+                  </section>
 
-                <Card className="order-3 border-cyan-500/40 bg-[#02070d] xl:order-none">
-                  <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-                    <div>
-                      <CardTitle className="flex items-center text-cyan-300 text-lg">
-                        <Activity className="w-5 h-5 mr-2" /> Market Pulse
-                      </CardTitle>
-                      <CardDescription className="text-gray-400">
-                        Emotion-priced tickers reacting to the story so far.
-                      </CardDescription>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs sm:flex sm:items-center sm:gap-3 sm:text-sm">
-                      <div className="flex items-center gap-2 text-cyan-200">
-                        <Gauge className="w-4 h-4" /> Drama {Math.round(dramaScore)}
+                  <section className="arcade-market-board">
+                    <div className="arcade-panel-title">
+                      <div>
+                        <span className="arcade-kicker">Market Lanes</span>
+                        <h3>Emotion-priced tickers</h3>
                       </div>
-                      <div className="flex items-center gap-2 text-green-300">
-                        <TrendingUp className="w-4 h-4" /> Bullish {stocks.filter((stock) => stock.changePercent > 0).length}
-                      </div>
-                      <div className="flex items-center gap-2 text-red-300">
-                        <TrendingDown className="w-4 h-4" /> Bearish {stocks.filter((stock) => stock.changePercent < 0).length}
+                      <div className="arcade-market-stats">
+                        <span>Drama {Math.round(dramaScore)}</span>
+                        <span className="arcade-good">Up {stocks.filter((stock) => stock.changePercent > 0).length}</span>
+                        <span className="arcade-bad">Down {stocks.filter((stock) => stock.changePercent < 0).length}</span>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="arcade-stock-list">
                       {stocks.map((stock) => (
                         <button
                           key={stock.symbol}
                           type="button"
-                          className={`grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:grid-cols-[minmax(0,1.35fr)_auto_minmax(160px,0.65fr)] sm:items-center ${
-                            selectedStock?.symbol === stock.symbol
-                              ? "border-cyan-400 bg-cyan-500/10 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.18)]"
-                              : "border-gray-800 bg-black/20 hover:border-cyan-400/50"
-                          }`}
                           onClick={() => setSelectedStock(stock)}
+                          className={selectedStock?.symbol === stock.symbol ? "is-active" : ""}
                         >
-                          <div className="min-w-0">
-                            <div className="flex min-w-0 flex-wrap items-center gap-2">
-                              <div className="text-lg font-bold text-cyan-200">{stock.symbol}</div>
-                              <div className="truncate text-xs text-gray-400">{stock.name}</div>
-                              <Badge variant="outline" className="text-xs uppercase">
-                                {stock.sector}
-                              </Badge>
-                            </div>
-                            <p className="mt-2 line-clamp-1 text-xs leading-relaxed text-gray-400">{stock.storyline}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg text-cyan-100">${stock.price.toFixed(2)}</div>
-                            <div
-                              className={`flex items-center justify-end text-xs ${
-                                stock.changePercent >= 0 ? "text-green-400" : "text-red-400"
-                              }`}
-                            >
-                              {stock.changePercent >= 0 ? <ArrowUp className="w-3 h-3 mr-1" /> : <ArrowDown className="w-3 h-3 mr-1" />}
-                              {Math.abs(stock.changePercent).toFixed(2)}%
-                            </div>
-                          </div>
-                          <div className="col-span-2 flex items-center gap-2 text-xs text-gray-400 sm:col-span-1">
-                            <span>Momentum</span>
-                            <div className="flex-1 bg-gray-800 h-2 rounded-full overflow-hidden">
-                              <div
-                                className={`h-2 ${stock.momentum >= 0 ? "bg-green-400" : "bg-red-400"}`}
-                                style={{ width: `${clamp(Math.abs(stock.momentum) * 50, 5, 100)}%` }}
-                              />
-                            </div>
-                            <span className={stock.momentum >= 0 ? "text-green-400" : "text-red-400"}>
-                              {stock.momentum >= 0 ? "RALLY" : "SPIRAL"}
-                            </span>
-                          </div>
+                          <span className="arcade-symbol">{stock.symbol}</span>
+                          <span className="arcade-stock-name">{stock.name}</span>
+                          <span className="arcade-sector">{stock.sector}</span>
+                          <span className="arcade-price">${stock.price.toFixed(2)}</span>
+                          <span className={stock.changePercent >= 0 ? "arcade-good" : "arcade-bad"}>
+                            {stock.changePercent >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                            {Math.abs(stock.changePercent).toFixed(2)}%
+                          </span>
+                          <span className="arcade-momentum">
+                            <i style={{ width: `${clamp(Math.abs(stock.momentum) * 50, 8, 100)}%` }} />
+                            {stock.momentum >= 0 ? "RALLY" : "SPIRAL"}
+                          </span>
                         </button>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
+                  </section>
+                </div>
 
-                <Card className="order-5 border-cyan-500/40 bg-[#02070d] xl:order-none">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Newspaper className="w-5 h-5 mr-2" /> Market Events & Rumors
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Live feed from media desk + NPC traders reacting to your moves.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-[240px] pr-4">
-                      <div className="space-y-4">
-                        {marketEvents.map((event) => (
-                          <div key={event.id} className="p-3 border border-cyan-500/20 rounded-lg bg-black/50">
-                            <div className="flex items-center justify-between text-xs text-gray-400">
-                              <span>{event.timestamp.toLocaleTimeString()}</span>
-                              <Badge className="bg-cyan-600/50 text-cyan-100 text-[10px] uppercase">
-                                {event.tone}
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-cyan-100 mt-2 leading-relaxed">{event.title}</div>
-                            <p className="text-xs text-gray-400 mt-1">{event.description}</p>
-                            {event.affected.length > 0 && (
-                              <div className="mt-2 text-xs text-cyan-200">
-                                Impacted: {event.affected.join(", ")}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                        {marketEvents.length === 0 && (
-                          <div className="text-sm text-gray-400 text-center py-6">Rumor desk warming up...</div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="contents xl:block xl:space-y-5">
-                <Card className="order-1 border-cyan-300/60 bg-[#011014] shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)] xl:order-none">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Target className="w-5 h-5 mr-2" /> Quick Trade Console
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Trade on vibes. Influence grows when you nail the cultural beat.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6">
-                    {selectedStock ? (
-                      <div className="space-y-4">
-                        <div className="rounded-md border border-cyan-500/20 bg-black/50 p-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="text-lg text-cyan-200 font-bold">{selectedStock.symbol}</div>
-                              <div className="text-xs text-gray-400">{selectedStock.name}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg text-cyan-100">${selectedStock.price.toFixed(2)}</div>
-                              <Badge variant="outline" className="text-xs mt-1 uppercase">
-                                {selectedStock.sentiment}
-                              </Badge>
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-400 mt-2 leading-relaxed">{selectedStock.storyline}</p>
-                          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                            <div className="border border-cyan-500/20 bg-black/30 p-2">
-                              <div className="text-gray-500">Cash</div>
-                              <div className="font-semibold text-cyan-100">${cash.toFixed(0)}</div>
-                            </div>
-                            <div className="border border-cyan-500/20 bg-black/30 p-2">
-                              <div className="text-gray-500">Held</div>
-                              <div className="font-semibold text-cyan-100">{selectedHolding?.shares ?? 0} shares</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button
-                            variant={orderType === "buy" ? "default" : "outline"}
-                            onClick={() => setOrderType("buy")}
-                            className={`min-h-11 flex-1 ${orderType === "buy" ? "bg-green-500 hover:bg-green-600" : "border-cyan-500/40"}`}
-                          >
-                            BUY
-                          </Button>
-                          <Button
-                            variant={orderType === "sell" ? "default" : "outline"}
-                            onClick={() => setOrderType("sell")}
-                            className={`min-h-11 flex-1 ${orderType === "sell" ? "bg-red-500 hover:bg-red-600" : "border-cyan-500/40"}`}
-                          >
-                            SELL
-                          </Button>
-                        </div>
-
-                        <div>
-                          <label className="text-xs text-gray-300">Amount ($)</label>
-                          <Input
-                            type="number"
-                            value={orderAmount}
-                            onChange={(event) => setOrderAmount(event.target.value)}
-                            placeholder="Enter order size"
-                            className="min-h-11 bg-black/60 border-cyan-500/30 text-cyan-200"
-                          />
-                          <div className="text-[10px] text-gray-400 mt-1">
-                            ~{selectedStock.price > 0 ? Math.floor(Number(orderAmount || 0) / selectedStock.price) : 0} shares
-                          </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                            {[500, 1500, 3000].map((amount) => {
-                              const sellCapacity = (selectedHolding?.shares ?? 0) * selectedStock.price
-                              const disabled = isExecutingOrder || (orderType === "buy" ? cash < amount : sellCapacity < amount)
-                              return (
-                                <button
-                                  key={amount}
-                                  type="button"
-                                  disabled={disabled}
-                                  onClick={() => {
-                                    setOrderAmount(String(amount))
-                                    void handleExecuteOrder(amount)
-                                  }}
-                                  className="min-h-9 border border-cyan-500/20 bg-black/40 px-2 text-xs text-cyan-100 transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                  Route ${amount.toLocaleString()}
-                                </button>
-                              )
-                            })}
-                            <button
-                              type="button"
-                              disabled={maxOrderAmount <= 0 || isExecutingOrder}
-                              onClick={() => {
-                                setOrderAmount(maxOrderAmount > 0 ? String(maxOrderAmount) : "")
-                                if (maxOrderAmount > 0) void handleExecuteOrder(maxOrderAmount)
-                              }}
-                              className="min-h-9 border border-cyan-500/20 bg-black/40 px-2 text-xs text-cyan-100 transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              Route Max
-                            </button>
-                          </div>
-                        </div>
-
-                        <Button
-                          onClick={() => void handleExecuteOrder()}
-                          disabled={isExecutingOrder || !orderAmount.trim()}
-                          className="min-h-11 w-full bg-cyan-500 text-black font-bold hover:bg-cyan-400 disabled:opacity-40"
-                        >
-                          {isExecutingOrder ? "Routing..." : `Execute ${orderType.toUpperCase()}`}
-                        </Button>
-                      </div>
+                <section className="arcade-rumor-feed">
+                  <div className="arcade-panel-title">
+                    <div>
+                      <span className="arcade-kicker">Rumor Feed</span>
+                      <h3>Cabinet broadcast</h3>
+                    </div>
+                  </div>
+                  <div className="arcade-feed-row">
+                    {marketEvents.length === 0 ? (
+                      <p>Rumor desk warming up...</p>
                     ) : (
-                      <div className="text-center text-gray-400 py-10">
-                        <Target className="w-12 h-12 mx-auto mb-3" />
-                        Select a ticker to trade.
-                      </div>
+                      marketEvents.slice(0, 4).map((event) => (
+                        <article key={event.id}>
+                          <span>{event.timestamp.toLocaleTimeString()}</span>
+                          <strong>{event.title}</strong>
+                          <p>{event.description}</p>
+                          {event.affected.length > 0 && <em>{event.affected.join(" / ")}</em>}
+                        </article>
+                      ))
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </section>
+              </section>
 
-                <Card className="order-4 border-cyan-500/40 bg-[#02070d] xl:order-none">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Zap className="w-5 h-5 mr-2" /> Community Impulses
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Trigger cultural events that swing sentiment in seconds.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6">
-                    {COMMUNITY_IMPULSES.map((impulse) => {
-                      const cooldown = impulseCooldowns[impulse.id] ?? 0
-                      return (
-                        <button
-                          key={impulse.id}
-                          onClick={() => handleImpulse(impulse)}
-                          disabled={cooldown > 0}
-                          className={`min-h-[76px] w-full rounded-md border p-3 text-left transition active:border-cyan-300 active:bg-cyan-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:p-4 ${
-                            cooldown > 0
-                              ? "border-gray-800 text-gray-500"
-                              : "border-cyan-500/30 hover:border-cyan-400"
-                          } bg-black/40`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <impulse.icon className="w-5 h-5 text-cyan-200" />
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-cyan-100 font-semibold">{impulse.label}</span>
-                                <Badge className="bg-cyan-600/60 text-black text-[10px]">
-                                  {cooldown > 0 ? `${cooldown}s` : "READY"}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-gray-400 mt-1 leading-relaxed">{impulse.description}</p>
-                              <div className="flex items-center gap-3 text-[11px] text-gray-400 mt-2">
-                                <span><Flame className="w-3 h-3 inline-block mr-1" /> Drama {impulse.effect.drama >= 0 ? "+" : ""}{impulse.effect.drama}</span>
-                                <span><Star className="w-3 h-3 inline-block mr-1" /> Influence +{impulse.effect.influence}</span>
-                              </div>
-                            </div>
-                          </div>
+              <aside className="arcade-control-deck">
+                <section className="arcade-stick-panel">
+                  <div className="arcade-panel-title">
+                    <div>
+                      <span className="arcade-kicker">Player One</span>
+                      <h3>Trade Deck</h3>
+                    </div>
+                    <Target className="h-5 w-5" />
+                  </div>
+
+                  {selectedStock ? (
+                    <div className="arcade-selected-stock">
+                      <div className="arcade-stock-card">
+                        <div>
+                          <strong>{selectedStock.symbol}</strong>
+                          <span>{selectedStock.name}</span>
+                        </div>
+                        <div>
+                          <strong>${selectedStock.price.toFixed(2)}</strong>
+                          <span>{selectedStock.sentiment}</span>
+                        </div>
+                      </div>
+                      <p>{selectedStock.storyline}</p>
+                      <div className="arcade-bank-grid">
+                        <div>
+                          <span>Cash</span>
+                          <strong>${formatMoney(cash)}</strong>
+                        </div>
+                        <div>
+                          <span>Held</span>
+                          <strong>{selectedHolding?.shares ?? 0}</strong>
+                        </div>
+                        <div>
+                          <span>XP</span>
+                          <strong>{player.xp}</strong>
+                        </div>
+                        <div>
+                          <span>Influence</span>
+                          <strong>{influence}</strong>
+                        </div>
+                      </div>
+
+                      <div className="arcade-buy-sell">
+                        <button type="button" onClick={() => setOrderType("buy")} className={orderType === "buy" ? "is-active buy" : "buy"}>
+                          BUY
                         </button>
-                      )
-                    })}
-                  </CardContent>
-                </Card>
-
-                <Card className="order-6 border-cyan-500/40 bg-[#02070d] xl:order-none">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Trophy className="w-5 h-5 mr-2" /> Influence Meter
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Being early, loud, and right amplifies your sway.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="p-4 bg-black/60 border border-cyan-500/30 rounded-lg">
-                      <div className="text-sm text-cyan-200">Influence Score</div>
-                      <div className="text-3xl font-bold text-cyan-100">{influence}</div>
-                      <Progress value={clamp((influence % 100) + 20, 0, 100)} className="h-2 bg-gray-800 mt-3" />
-                      <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                        Influence multiplies your votes, boosts NPC reaction speed, and unlocks faction rituals.
-                      </p>
-                    </div>
-
-                    <div className="space-y-3 text-xs text-gray-300">
-                      <div className="flex items-center gap-2">
-                        <Rocket className="w-3 h-3 text-cyan-200" />
-                        Early trades during hype arcs earn +2 influence.
+                        <button type="button" onClick={() => setOrderType("sell")} className={orderType === "sell" ? "is-active sell" : "sell"}>
+                          SELL
+                        </button>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Megaphone className="w-3 h-3 text-cyan-200" />
-                        Community impulses that land well boost faction respect.
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Award className="w-3 h-3 text-cyan-200" />
-                        Maintain streaks to unlock custom tickers and Prophet titles.
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="portfolio" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="xl:col-span-2 space-y-6">
-                <Card className="bg-gray-950/80 border-cyan-500/40">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <PieChart className="w-5 h-5 mr-2" /> Holdings Breakdown
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Track performance by vibes, story arcs, and P&L.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {positions.length === 0 ? (
-                      <div className="text-center text-gray-400 py-8">You haven&apos;t shaped the market yet. Execute a trade to leave a mark.</div>
-                    ) : (
-                      <div className="space-y-4">
-                        {positions.map((position) => {
-                          const stock = stocks.find((item) => item.symbol === position.symbol)
-                          const sentiment = stock?.sentiment ?? "bullish"
+                      <label className="arcade-input-label" htmlFor="order-size">Order size</label>
+                      <Input
+                        id="order-size"
+                        type="number"
+                        value={orderAmount}
+                        onChange={(event) => setOrderAmount(event.target.value)}
+                        placeholder="Type custom stake"
+                        className="arcade-input"
+                      />
+                      <div className="arcade-share-estimate">
+                        Est. {selectedStock.price > 0 ? Math.floor(Number(orderAmount || 0) / selectedStock.price) : 0} shares
+                      </div>
+
+                      <div className="arcade-coin-grid">
+                        {[500, 1500, 3000].map((amount) => {
+                          const sellCapacity = (selectedHolding?.shares ?? 0) * selectedStock.price
+                          const disabled = isExecutingOrder || (orderType === "buy" ? cash < amount : sellCapacity < amount)
                           return (
-                            <div key={position.symbol} className="p-4 border border-cyan-500/30 rounded-lg bg-black/50">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="text-cyan-200 font-semibold">{position.symbol}</div>
-                                  <div className="text-xs text-gray-400">Avg ${position.avgPrice.toFixed(2)} · {position.shares} shares</div>
-                                </div>
-                                <Badge variant="outline" className="uppercase text-xs">{sentiment}</Badge>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3 mt-3 text-xs text-gray-300">
-                                <div>
-                                  <div className="text-gray-400">Current Value</div>
-                                  <div className="text-cyan-100 font-semibold">${position.currentValue.toFixed(2)}</div>
-                                </div>
-                                <div>
-                                  <div className="text-gray-400">P&L</div>
-                                  <div className={position.pnl >= 0 ? "text-green-400" : "text-red-400"}>
-                                    {position.pnl >= 0 ? "+" : ""}${position.pnl.toFixed(2)} ({position.pnlPercent >= 0 ? "+" : ""}
-                                    {position.pnlPercent.toFixed(1)}%)
-                                  </div>
-                                </div>
-                              </div>
-                              {stock && <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">{stock.storyline}</p>}
-                            </div>
+                            <button
+                              key={amount}
+                              type="button"
+                              disabled={disabled}
+                              onPointerDown={() => setQuickOrderAmount(amount)}
+                              onClick={() => setQuickOrderAmount(amount)}
+                            >
+                              <span>Coin</span>
+                              ${formatMoney(amount)}
+                            </button>
                           )
                         })}
+                        <button
+                          type="button"
+                          disabled={maxOrderAmount <= 0 || isExecutingOrder}
+                          onPointerDown={() => setQuickOrderAmount(maxOrderAmount)}
+                          onClick={() => setQuickOrderAmount(maxOrderAmount)}
+                        >
+                          <span>Coin</span>
+                          Max
+                        </button>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => void handleExecuteOrder()}
+                        disabled={isExecutingOrder || !orderAmount.trim()}
+                        className="arcade-action-button"
+                      >
+                        {isExecutingOrder ? "Routing..." : `Punch ${orderType.toUpperCase()}`}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="arcade-empty">Select a ticker on the playfield.</div>
+                  )}
+                </section>
+
+                <section className="arcade-specials">
+                  <div className="arcade-panel-title">
+                    <div>
+                      <span className="arcade-kicker">Special Moves</span>
+                      <h3>Impulse buttons</h3>
+                    </div>
+                    <Zap className="h-5 w-5" />
+                  </div>
+                  {COMMUNITY_IMPULSES.map((impulse) => {
+                    const cooldown = impulseCooldowns[impulse.id] ?? 0
+                    return (
+                      <button
+                        key={impulse.id}
+                        type="button"
+                        onClick={() => handleImpulse(impulse)}
+                        disabled={cooldown > 0}
+                      >
+                        <impulse.icon className="h-5 w-5" />
+                        <span>
+                          <strong>{impulse.label}</strong>
+                          <em>{impulse.description}</em>
+                        </span>
+                        <b>{cooldown > 0 ? `${cooldown}s` : "Ready"}</b>
+                      </button>
+                    )
+                  })}
+                </section>
+              </aside>
+            </div>
+          )}
+
+          {activeTab === "portfolio" && (
+            <div className="arcade-ledger-grid">
+              <section className="arcade-screen">
+                <div className="arcade-screen-head">
+                  <div>
+                    <span className="arcade-kicker">Bank Roll</span>
+                    <h2>Holdings and action tape</h2>
+                  </div>
+                  <div className="arcade-control-score">
+                    <span>Cash</span>
+                    <strong>${formatMoney(cash)}</strong>
+                  </div>
+                </div>
+                <div className="arcade-ledger-columns">
+                  <div className="arcade-ledger-panel">
+                    <h3>Open positions</h3>
+                    {positions.length === 0 ? (
+                      <p>No live exposure. Punch a coin on the playfield.</p>
+                    ) : (
+                      positions.map((position) => {
+                        const stock = stocks.find((item) => item.symbol === position.symbol)
+                        return (
+                          <article key={position.symbol}>
+                            <strong>{position.symbol}</strong>
+                            <span>{position.shares} shares at ${position.avgPrice.toFixed(2)}</span>
+                            <b className={position.pnl >= 0 ? "arcade-good" : "arcade-bad"}>
+                              {position.pnl >= 0 ? "+" : ""}${position.pnl.toFixed(2)}
+                            </b>
+                            {stock && <p>{stock.storyline}</p>}
+                          </article>
+                        )
+                      })
                     )}
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gray-950/80 border-cyan-500/40">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <MessageCircle className="w-5 h-5 mr-2" /> Action Feed
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Echoes of what you and the community just pulled off.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-[260px] pr-4">
-                      <div className="space-y-3">
-                        {actionFeed.map((item) => (
-                          <div key={item.id} className="p-3 border border-cyan-500/20 rounded-lg bg-black/40">
-                            <div className="flex items-center justify-between text-[10px] text-gray-400">
-                              <span>{item.timestamp.toLocaleTimeString()}</span>
-                              <Badge className="bg-cyan-600/40 text-cyan-100 text-[10px] uppercase">{item.type}</Badge>
-                            </div>
-                            <p className="text-xs text-cyan-100 mt-2 leading-relaxed">{item.text}</p>
-                          </div>
-                        ))}
-                        {actionFeed.length === 0 && (
-                          <div className="text-center text-gray-500 py-6 text-sm">Make a move to wake the feed.</div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="space-y-6">
-                <Card className="bg-gray-950/80 border-cyan-500/40">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Activity className="w-5 h-5 mr-2" /> Performance Snapshot
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-xs text-gray-300">
-                    <div className="flex items-center justify-between">
-                      <span>Cash on Hand</span>
-                      <span className="text-cyan-100 font-semibold">${cash.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Open Positions</span>
-                      <span>{positions.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>XP</span>
-                      <span>{player.xp}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Streak</span>
-                      <span>{player.streak} days</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gray-950/80 border-cyan-500/40">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Trophy className="w-5 h-5 mr-2" /> Leaderboard Signal
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">Top cultural movers right now.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3 text-xs text-gray-300">
-                      {leaderboard.slice(0, 5).map((entry) => (
-                        <div key={entry.id} className="flex items-center justify-between">
-                          <div>
-                            <div className="text-cyan-100 font-semibold">{entry.username}</div>
-                            <div className="text-[10px] text-gray-500">Lv.{entry.level} · ${entry.totalValue.toLocaleString()}</div>
-                          </div>
-                          <Badge className="bg-cyan-600/40 text-black text-[10px]">Influence {Math.max(10, entry.level * 3)}</Badge>
-                        </div>
-                      ))}
-                      {leaderboard.length === 0 && (
-                        <div className="text-center text-gray-500 py-6">Leaderboard syncing...</div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                  <div className="arcade-ledger-panel">
+                    <h3>Action tape</h3>
+                    {actionFeed.length === 0 ? (
+                      <p>Make a move to wake the tape.</p>
+                    ) : (
+                      actionFeed.slice(0, 8).map((item) => (
+                        <article key={item.id}>
+                          <strong>{item.type}</strong>
+                          <span>{item.timestamp.toLocaleTimeString()}</span>
+                          <p>{item.text}</p>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                  <div className="arcade-ledger-panel">
+                    <h3>Cabinet leaderboard</h3>
+                    {leaderboard.length === 0 ? (
+                      <p>Leaderboard syncing...</p>
+                    ) : (
+                      leaderboard.slice(0, 6).map((entry) => (
+                        <article key={entry.id}>
+                          <strong>{entry.username}</strong>
+                          <span>Lv.{entry.level} // ${formatMoney(entry.totalValue)}</span>
+                          <b>#{entry.rank}</b>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </section>
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="culture" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <Card className="bg-gray-950/80 border-cyan-500/40">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Users className="w-5 h-5 mr-2" /> Faction Heat Map
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Choose a clan, coordinate narratives, stage cultural warfare.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {FACTION_HIGHLIGHTS.map((faction) => (
-                      <div key={faction.name} className="p-4 border border-cyan-500/20 rounded-lg bg-black/50">
-                        <div className="flex items-center gap-2">
-                          <faction.icon className="w-5 h-5 text-cyan-200" />
-                          <div className="text-cyan-100 font-semibold">{faction.name}</div>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2 leading-relaxed">{faction.motto}</p>
-                        <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">{faction.focus}</p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gray-950/80 border-cyan-500/40">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Swords className="w-5 h-5 mr-2" /> Seasonal Arc Preview
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Weekly anime energy with markets as the battleground.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-sm text-gray-300 leading-relaxed">
-                    <div className="p-4 border border-cyan-500/20 rounded-lg bg-black/40">
-                      <h3 className="text-cyan-100 font-semibold">Current Episode: EchoFest or Bust</h3>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Media team is priming a triple-act drama: leak, backlash, investigation. Your collective decisions rewrite tomorrow&apos;s broadcast.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-gray-400">
-                      <div className="p-3 border border-cyan-500/20 rounded-lg bg-black/40">
-                        <h4 className="text-cyan-200 font-semibold mb-2">Rumor Simulation</h4>
-                        NPC traders now react in under 90 seconds when drama &gt; 70.
-                      </div>
-                      <div className="p-3 border border-cyan-500/20 rounded-lg bg-black/40">
-                        <h4 className="text-cyan-200 font-semibold mb-2">Market Memory</h4>
-                        Story decisions bias price direction for the next cycle.
-                      </div>
-                      <div className="p-3 border border-cyan-500/20 rounded-lg bg-black/40">
-                        <h4 className="text-cyan-200 font-semibold mb-2">Spotlight</h4>
-                        Media desk will feature top impulse creators in Friday&apos;s Echo Report.
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="space-y-6">
-                <Card className="bg-gray-950/80 border-cyan-500/40">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Radio className="w-5 h-5 mr-2" /> Media Desk Missions
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Complete beats to earn badges, custom tickers, and lore drops.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-xs text-gray-300">
-                    <div className="p-3 border border-cyan-500/20 rounded-lg bg-black/40">
-                      <div className="text-cyan-100 font-semibold">Echo Report Tease</div>
-                      <p className="text-[11px] text-gray-400 mt-1">
-                        Submit screenshots of your wildest vote coalition for a chance to be canonized.
-                      </p>
-                    </div>
-                    <div className="p-3 border border-cyan-500/20 rounded-lg bg-black/40">
-                      <div className="text-cyan-100 font-semibold">Lore Dividend</div>
-                      <p className="text-[11px] text-gray-400 mt-1">
-                        Influence &gt; 60 unlocks the Market Prophet badge and a custom rumor drop.
-                      </p>
-                    </div>
-                    <div className="p-3 border border-cyan-500/20 rounded-lg bg-black/40">
-                      <div className="text-cyan-100 font-semibold">Faction Spotlight</div>
-                      <p className="text-[11px] text-gray-400 mt-1">
-                        Factions that coordinate three successful impulses in a session get a media feature.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gray-950/80 border-cyan-500/40">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-cyan-300 text-lg">
-                      <Gavel className="w-5 h-5 mr-2" /> Weekly Rituals
-                    </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      Rhythm for the media team to amplify the cultural machine.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-xs text-gray-300">
-                    <div className="flex items-center gap-3">
-                      <Badge className="bg-cyan-600/50 text-black text-[10px]">MON</Badge>
-                      <span>NPC trader briefing + rumor seeding challenges.</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge className="bg-cyan-600/50 text-black text-[10px]">WED</Badge>
-                      <span>Community vote recap stream featuring top cultural moves.</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge className="bg-cyan-600/50 text-black text-[10px]">FRI</Badge>
-                      <span>Echo Report drops. Seasonal lore pivot based on the week&apos;s winners.</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+          {activeTab === "culture" && (
+            <div className="arcade-ledger-grid">
+              <section className="arcade-screen">
+                <div className="arcade-screen-head">
+                  <div>
+                    <span className="arcade-kicker">Lore Board</span>
+                    <h2>Factions, rituals, and seasonal heat</h2>
+                  </div>
+                  <div className="arcade-control-score">
+                    <span>Drama</span>
+                    <strong>{Math.round(dramaScore)}</strong>
+                  </div>
+                </div>
+                <div className="arcade-lore-grid">
+                  {FACTION_HIGHLIGHTS.map((faction) => (
+                    <article key={faction.name}>
+                      <faction.icon className="h-5 w-5" />
+                      <strong>{faction.name}</strong>
+                      <p>{faction.motto}</p>
+                      <em>{faction.focus}</em>
+                    </article>
+                  ))}
+                  <article>
+                    <Radio className="h-5 w-5" />
+                    <strong>Echo Report</strong>
+                    <p>Friday broadcast pivots from the strongest community move.</p>
+                    <em>Influence above 60 unlocks a custom rumor drop.</em>
+                  </article>
+                  <article>
+                    <Swords className="h-5 w-5" />
+                    <strong>Current Episode</strong>
+                    <p>EchoFest leak, backlash, investigation. Markets are the battleground.</p>
+                    <em>Win the story before the ticker catches up.</em>
+                  </article>
+                </div>
+              </section>
             </div>
-          </TabsContent>
-        </Tabs>
+          )}
+        </section>
       </main>
     </div>
   )
 }
-
