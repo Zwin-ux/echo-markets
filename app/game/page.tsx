@@ -571,7 +571,7 @@ export default function GamePage() {
         timestamp
       })
 
-      pushNotification(`Story advanced: ${currentBeat.title} → ${option.label}`)
+      pushNotification(`Story advanced: ${currentBeat.title} -> ${option.label}`)
 
       setCommunityVotes({})
       setVoteTimer(VOTE_DURATION)
@@ -937,39 +937,39 @@ export default function GamePage() {
   return (
     <div className="min-h-screen bg-black text-cyan-300 font-mono">
       <header className="border-b border-cyan-500/30 bg-gray-950/70">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center space-x-4">
+        <div className="max-w-7xl mx-auto px-3 py-3 sm:px-4 sm:py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center space-x-3 sm:space-x-4">
             <Image
               src="/LATTICE Logo in Neon Turquoise.png"
               alt="Echo Markets"
-              width={44}
-              height={44}
+              width={40}
+              height={40}
               className="brightness-125"
             />
             <div>
-              <h1 className="text-2xl font-bold text-cyan-400">Echo Markets</h1>
-              <p className="text-xs text-gray-400">Emotion-priced markets. Culture is the index.</p>
+              <h1 className="text-xl font-bold text-cyan-400 sm:text-2xl">Echo Markets</h1>
+              <p className="text-[11px] leading-4 text-gray-400 sm:text-xs">Emotion-priced markets. Culture is the index.</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-center space-x-2">
+          <div className="grid w-full grid-cols-2 gap-3 text-left sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-6">
+            <div className="flex items-center space-x-2 rounded border border-cyan-500/20 bg-black/30 px-3 py-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
               <Crown className="w-4 h-4 text-yellow-400" />
               <span className="text-yellow-400 text-sm">#{player.rank}</span>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 rounded border border-cyan-500/20 bg-black/30 px-3 py-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
               <Star className="w-4 h-4 text-purple-400" />
               <span className="text-purple-300 text-sm">Lv.{player.level}</span>
-              <Progress value={(player.xp % 1000) / 10} className="w-20 h-2 bg-gray-800" />
+              <Progress value={(player.xp % 1000) / 10} className="h-2 min-w-0 flex-1 bg-gray-800 sm:w-20 sm:flex-none" />
             </div>
-            <div className="text-right">
+            <div className="col-span-2 rounded border border-cyan-500/20 bg-black/30 px-3 py-2 sm:col-span-1 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-right">
               <div className="text-xs text-gray-400">Portfolio Power</div>
               <div className="text-lg text-cyan-200 font-bold">${portfolioValue.toLocaleString()}</div>
               <div className={`text-xs ${player.dayChange >= 0 ? "text-green-400" : "text-red-400"}`}>
                 {player.dayChange >= 0 ? "+" : ""}${player.dayChange.toFixed(2)} today
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="hidden items-center space-x-2 sm:flex">
               <Bell className="w-4 h-4 text-cyan-300" />
               {notifications.length > 0 && (
                 <Badge className="bg-red-500 text-white text-xs">{notifications.length}</Badge>
@@ -979,23 +979,23 @@ export default function GamePage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-3 py-4 space-y-4 sm:px-4 sm:py-6 sm:space-y-6">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
-          <TabsList className="bg-gray-900/70 border border-cyan-500/30 text-gray-400">
-            <TabsTrigger value="loop" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">
-              <BarChart3 className="w-4 h-4 mr-2" /> Core Loop
+          <TabsList className="grid h-auto w-full grid-cols-3 bg-gray-900/70 border border-cyan-500/30 text-gray-400 sm:inline-flex sm:w-auto">
+            <TabsTrigger value="loop" className="px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:px-3 sm:text-sm">
+              <BarChart3 className="w-3.5 h-3.5 mr-1.5 sm:w-4 sm:h-4 sm:mr-2" /> Core Loop
             </TabsTrigger>
-            <TabsTrigger value="portfolio" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">
-              <PieChart className="w-4 h-4 mr-2" /> Portfolio
+            <TabsTrigger value="portfolio" className="px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:px-3 sm:text-sm">
+              <PieChart className="w-3.5 h-3.5 mr-1.5 sm:w-4 sm:h-4 sm:mr-2" /> Portfolio
             </TabsTrigger>
-            <TabsTrigger value="culture" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">
-              <Users className="w-4 h-4 mr-2" /> Culture
+            <TabsTrigger value="culture" className="px-2 py-2 text-xs data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 sm:px-3 sm:text-sm">
+              <Users className="w-3.5 h-3.5 mr-1.5 sm:w-4 sm:h-4 sm:mr-2" /> Culture
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="loop" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="xl:col-span-2 space-y-6">
+          <TabsContent value="loop" className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+              <div className="xl:col-span-2 space-y-4 sm:space-y-6">
                 <Card className="bg-gray-950/80 border-cyan-500/40">
                   <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                     <div>
@@ -1015,23 +1015,23 @@ export default function GamePage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="p-4 rounded-lg border border-cyan-500/20 bg-black/40">
-                      <div className="flex items-center gap-3">
+                  <CardContent className="space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6">
+                    <div className="p-3 sm:p-4 rounded-lg border border-cyan-500/20 bg-black/40">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <Badge variant="outline" className="uppercase text-xs tracking-widest">
                           {currentBeat.mood}
                         </Badge>
-                        <div className="text-xs text-gray-400 space-x-2">
+                        <div className="flex min-w-0 flex-wrap gap-x-2 gap-y-1 text-xs text-gray-400">
                           {currentBeat.tags.map((tag) => (
                             <span key={tag}>#{tag}</span>
                           ))}
                         </div>
                       </div>
-                      <h2 className="text-xl text-cyan-200 mt-2">{currentBeat.title}</h2>
+                      <h2 className="text-lg text-cyan-200 mt-2 sm:text-xl">{currentBeat.title}</h2>
                       <p className="text-sm text-gray-300 mt-2 leading-relaxed">{currentBeat.synopsis}</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                       {currentBeat.options.map((option) => {
                         const votes = communityVotes[option.id] ?? 0
                         const share = totalVotes ? Math.round((votes / totalVotes) * 100) : 0
@@ -1039,13 +1039,13 @@ export default function GamePage() {
                           <button
                             key={option.id}
                             onClick={() => handleVote(option)}
-                            className="group relative p-4 border border-cyan-500/20 rounded-lg text-left bg-black/40 hover:border-cyan-400 transition"
+                            className="group relative p-3 sm:p-4 border border-cyan-500/20 rounded-lg text-left bg-black/40 hover:border-cyan-400 active:border-cyan-300 active:bg-cyan-500/10 transition"
                           >
                             <div className="flex items-start justify-between">
-                              <div className="font-semibold text-cyan-200">{option.label}</div>
+                              <div className="font-semibold text-cyan-200 leading-5">{option.label}</div>
                               <Badge className="bg-cyan-600/80 text-black text-xs">{votes} votes</Badge>
                             </div>
-                            <p className="text-sm text-gray-300 mt-2 leading-relaxed">{option.description}</p>
+                            <p className="text-sm text-gray-300 mt-2 leading-6 sm:leading-relaxed">{option.description}</p>
                             <div className="mt-3 text-xs text-gray-400 space-y-1">
                               <div className="flex items-center gap-2">
                                 <Flame className="w-3 h-3 text-orange-400" /> Drama {option.effect.drama >= 0 ? "+" : ""}{option.effect.drama}
@@ -1063,7 +1063,7 @@ export default function GamePage() {
                 </Card>
 
                 <Card className="bg-gray-950/80 border-cyan-500/40">
-                  <CardHeader className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
                     <div>
                       <CardTitle className="flex items-center text-cyan-300 text-lg">
                         <Activity className="w-5 h-5 mr-2" /> Market Pulse
@@ -1072,7 +1072,7 @@ export default function GamePage() {
                         Emotion-priced tickers reacting to the story so far.
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-3 text-sm">
+                    <div className="grid grid-cols-3 gap-2 text-xs sm:flex sm:items-center sm:gap-3 sm:text-sm">
                       <div className="flex items-center gap-2 text-cyan-200">
                         <Gauge className="w-4 h-4" /> Drama {Math.round(dramaScore)}
                       </div>
@@ -1084,12 +1084,12 @@ export default function GamePage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                       {stocks.map((stock) => (
                         <div
                           key={stock.symbol}
-                          className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                          className={`p-3 sm:p-4 rounded-lg border transition-all cursor-pointer ${
                             selectedStock?.symbol === stock.symbol
                               ? "border-cyan-400 bg-cyan-500/10 shadow-[0_0_20px_rgba(34,211,238,0.2)]"
                               : "border-gray-800 hover:border-cyan-400/50"
@@ -1173,7 +1173,7 @@ export default function GamePage() {
                 </Card>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <Card className="bg-gray-950/80 border-cyan-500/40">
                   <CardHeader>
                     <CardTitle className="flex items-center text-cyan-300 text-lg">
@@ -1183,7 +1183,7 @@ export default function GamePage() {
                       Trade on vibes. Influence grows when you nail the cultural beat.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6">
                     {selectedStock ? (
                       <div className="space-y-4">
                         <div className="p-3 border border-cyan-500/20 rounded-lg bg-black/50">
@@ -1229,7 +1229,7 @@ export default function GamePage() {
                             className="bg-black/60 border-cyan-500/30 text-cyan-200"
                           />
                           <div className="text-[10px] text-gray-400 mt-1">
-                            ≈{selectedStock.price > 0 ? Math.floor(Number(orderAmount || 0) / selectedStock.price) : 0} shares
+                            ~{selectedStock.price > 0 ? Math.floor(Number(orderAmount || 0) / selectedStock.price) : 0} shares
                           </div>
                         </div>
 
@@ -1259,7 +1259,7 @@ export default function GamePage() {
                       Trigger cultural events that swing sentiment in seconds.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6">
                     {COMMUNITY_IMPULSES.map((impulse) => {
                       const cooldown = impulseCooldowns[impulse.id] ?? 0
                       return (
@@ -1267,7 +1267,7 @@ export default function GamePage() {
                           key={impulse.id}
                           onClick={() => handleImpulse(impulse)}
                           disabled={cooldown > 0}
-                          className={`w-full text-left p-4 rounded-lg border transition ${
+                          className={`w-full text-left p-3 sm:p-4 rounded-lg border transition active:border-cyan-300 active:bg-cyan-500/10 ${
                             cooldown > 0
                               ? "border-gray-800 text-gray-500"
                               : "border-cyan-500/30 hover:border-cyan-400"
