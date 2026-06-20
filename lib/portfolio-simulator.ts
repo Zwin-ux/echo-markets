@@ -171,9 +171,9 @@ export class PortfolioSimulator {
       const portfolio = await EnhancedDatabaseService.getCurrentPortfolio(userId, date)
       
       // Get current holdings
-      const holdings = await prisma.holding.findMany({
+      const holdings = (await prisma.holding.findMany({
         where: { user_id: userId }
-      })
+      })) ?? []
 
       // Get current market prices for all held symbols
       const symbols = holdings.map(h => h.symbol)
@@ -370,7 +370,15 @@ export class PortfolioSimulator {
 
     // Get current portfolio
     const portfolio = await EnhancedDatabaseService.getCurrentPortfolio(order.userId)
-    const orderValue = (order.limitPrice || 0) * order.quantity
+    const orderPrice = order.orderType === 'market'
+      ? await this.getCurrentPrice(order.symbol)
+      : order.limitPrice
+
+    if (!orderPrice) {
+      return { valid: false, error: `No market data available for ${order.symbol}` }
+    }
+
+    const orderValue = orderPrice * order.quantity
 
     // Check risk controls
     if (orderValue > this.riskControls.maxOrderValue) {

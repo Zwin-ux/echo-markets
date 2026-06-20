@@ -118,7 +118,17 @@ export function createDemoTrade(input: {
   side: string
   amount: number
 }) {
-  const price = 48.2
+  const demoPrices: Record<string, number> = {
+    SCNDL: 48.2,
+    HYPE: 73.8,
+    MTHR: 132.6,
+    FURY: 25.1,
+    ORCL: 16.4,
+    VIBE: 58.9
+  }
+  const symbol = input.symbol.toUpperCase()
+  const side = input.side.toLowerCase()
+  const price = demoPrices[symbol] ?? 48.2
   const shares = Math.max(1, Math.floor(input.amount / price))
   const totalCost = Number((shares * price).toFixed(2))
   const xpGained = Math.max(10, Math.floor(totalCost / 100))
@@ -126,8 +136,8 @@ export function createDemoTrade(input: {
   return {
     trade: {
       orderId: `demo-order-${Date.now()}`,
-      symbol: input.symbol,
-      side: input.side,
+      symbol,
+      side,
       shares,
       executedPrice: price,
       totalCost,
@@ -142,7 +152,7 @@ export function createDemoTrade(input: {
       id: `demo-feed-${Date.now()}`,
       playerId: input.playerId,
       type: 'trade',
-      message: `${input.side.toUpperCase()} ${shares} ${input.symbol} in demo mode`,
+      message: `${side.toUpperCase()} ${shares} ${symbol} in demo mode`,
       timestamp: new Date().toISOString(),
       impact: Math.min(totalCost / 100000, 0.1)
     },

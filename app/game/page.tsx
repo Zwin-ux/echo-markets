@@ -32,7 +32,9 @@ import {
   CloudLightning,
   Megaphone,
   Gavel,
-  Award
+  Award,
+  CheckCircle2,
+  ClipboardList
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -115,6 +117,20 @@ interface ActionFeedItem {
   type: "story" | "trade" | "impulse" | "system"
   text: string
   timestamp: Date
+}
+
+interface PlayOutcome {
+  id: string
+  type: "vote" | "story" | "trade" | "impulse" | "system"
+  headline: string
+  detail: string
+  nextStep: string
+  affected: string[]
+  metrics: Array<{
+    label: string
+    value: string
+    tone?: "positive" | "negative" | "neutral"
+  }>
 }
 
 interface CommunityImpulse {
@@ -435,6 +451,19 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
+function signedNumber(value: number) {
+  return `${value >= 0 ? "+" : ""}${value}`
+}
+
+function formatMoveList(adjustments?: Record<string, number>) {
+  const entries = Object.entries(adjustments ?? {})
+  if (!entries.length) return "No direct ticker move"
+
+  return entries
+    .map(([symbol, shift]) => `${symbol} ${shift >= 0 ? "up" : "down"} ${Math.abs(Math.round(shift * 5 * 10) / 10)}%`)
+    .join(" / ")
+}
+
 export default function GamePage() {
   const [stocks, setStocks] = useState<Stock[]>(INITIAL_STOCKS)
   const [player, setPlayer] = useState<Player>({
@@ -465,6 +494,19 @@ export default function GamePage() {
   const [leaderboard, setLeaderboard] = useState<Player[]>([])
   const [isExecutingOrder, setIsExecutingOrder] = useState<boolean>(false)
   const [activeTab, setActiveTab] = useState<"loop" | "portfolio" | "culture">("loop")
+  const [combo, setCombo] = useState<number>(0)
+  const [lastOutcome, setLastOutcome] = useState<PlayOutcome>({
+    id: "opening-brief",
+    type: "system",
+    headline: "Run open: shape the tape",
+    detail: "Pick a ticker, place a small order, then steer the narrative so the market reacts while your exposure is live.",
+    nextStep: "Start with a $500-$1,500 order on the selected ticker.",
+    affected: ["SCNDL"],
+    metrics: [
+      { label: "Objective", value: "Trade + story", tone: "neutral" },
+      { label: "Risk", value: "Demo capital", tone: "neutral" }
+    ]
+  })
 
   const stocksRef = useRef(stocks)
   const dramaRef = useRef(dramaScore)
@@ -487,6 +529,60 @@ export default function GamePage() {
   const totalVotes = useMemo(
     () => Object.values(communityVotes).reduce((sum, count) => sum + count, 0),
     [communityVotes]
+  )
+
+  const selectedHolding = useMemo(
+    () => (selectedStock ? positions.find((position) => position.symbol === selectedStock.symbol) : undefined),
+    [positions, selectedStock]
+  )
+
+  const maxOrderAmount = useMemo(() => {
+    if (!selectedStock) return 0
+
+    return orderType === "buy"
+      ? Math.max(0, Math.floor(cash))
+      : Math.max(0, Math.floor((selectedHolding?.shares ?? 0) * selectedStock.price))
+  }, [cash, orderType, selectedHolding, selectedStock])
+
+  const missionSteps = useMemo(() => {
+    const madeTrade = positions.length > 0 || actionFeed.some((item) => item.type === "trade")
+    const hasStoryAction = actionFeed.some((item) => item.type === "story")
+    const hasImpulseAction = actionFeed.some((item) => item.type === "impulse")
+    const castVote = totalVotes > 0 || hasStoryAction
+    const impulseActive = Object.values(impulseCooldowns).some((cooldown) => cooldown > 0)
+    const firedImpulse = impulseActive || hasImpulseAction
+
+    return [
+      {
+        label: "Open exposure",
+        done: madeTrade,
+        detail: madeTrade ? `${positions.length || 1} live position${positions.length === 1 ? "" : "s"}` : "Route a small order."
+      },
+      {
+        label: "Steer the beat",
+        done: castVote,
+        detail: castVote
+          ? totalVotes > 0
+            ? `${totalVotes} vote${totalVotes === 1 ? "" : "s"} on this arc`
+            : "Story beat already moved."
+          : "Vote before the timer clears."
+      },
+      {
+        label: "Move sentiment",
+        done: firedImpulse,
+        detail: firedImpulse
+          ? impulseActive
+            ? "Impulse active on the tape."
+            : "Impulse already hit the tape."
+          : "Trigger one community impulse."
+      }
+    ]
+  }, [actionFeed, impulseCooldowns, positions.length, totalVotes])
+
+  const completedMissionSteps = missionSteps.filter((step) => step.done).length
+  const nextMissionStep = missionSteps.find((step) => !step.done)
+  const controlScore = Math.round(
+    clamp((completedMissionSteps / missionSteps.length) * 55 + Math.min(influence, 100) * 0.25 + Math.min(totalVotes * 4, 20), 0, 100)
   )
 
   const registerAction = useCallback((item: ActionFeedItem) => {
@@ -563,6 +659,20 @@ export default function GamePage() {
 
       setDramaScore((prev) => clamp(prev + option.effect.drama, 0, 100))
       setInfluence((prev) => prev + option.effect.influence)
+      setCombo((prev) => prev + 1)
+      setLastOutcome({
+        id: `story-outcome-${timestamp.getTime()}`,
+        type: "story",
+        headline: `Beat resolved: ${option.label}`,
+        detail: option.effect.rumor ?? `${currentBeat.title} resolved and pushed the market into a new beat.`,
+        nextStep: "Trade the moved tickers or fire an impulse before momentum decays.",
+        affected: Object.keys(option.effect.momentumShift ?? {}),
+        metrics: [
+          { label: "Drama", value: signedNumber(option.effect.drama), tone: option.effect.drama >= 0 ? "positive" : "negative" },
+          { label: "Influence", value: `+${option.effect.influence}`, tone: "positive" },
+          { label: "Tape move", value: formatMoveList(option.effect.momentumShift), tone: "neutral" }
+        ]
+      })
 
       registerAction({
         id: `story-${timestamp.getTime()}`,
@@ -606,12 +716,29 @@ export default function GamePage() {
 
   const handleVote = useCallback(
     (option: NarrativeOption) => {
+      const nextVoteCount = (communityVotes[option.id] ?? 0) + 1
+      const nextTotalVotes = totalVotes + 1
+      const voteShare = Math.round((nextVoteCount / nextTotalVotes) * 100)
+
       setCommunityVotes((prev) => ({
         ...prev,
-        [option.id]: (prev[option.id] ?? 0) + 1
+        [option.id]: nextVoteCount
       }))
 
       setInfluence((prev) => prev + 1)
+      setLastOutcome({
+        id: `vote-outcome-${Date.now()}`,
+        type: "vote",
+        headline: `Vote locked: ${option.label}`,
+        detail: `${voteShare}% of current votes now point here. If this wins, ${formatMoveList(option.effect.momentumShift).toLowerCase()}.`,
+        nextStep: "Open or adjust exposure before the vote timer resolves.",
+        affected: Object.keys(option.effect.momentumShift ?? {}),
+        metrics: [
+          { label: "Current share", value: `${voteShare}%`, tone: "neutral" },
+          { label: "Drama", value: signedNumber(option.effect.drama), tone: option.effect.drama >= 0 ? "positive" : "negative" },
+          { label: "Influence", value: "+1 now", tone: "positive" }
+        ]
+      })
 
       registerAction({
         id: `vote-${Date.now()}`,
@@ -620,7 +747,7 @@ export default function GamePage() {
         timestamp: new Date()
       })
     },
-    [registerAction]
+    [communityVotes, registerAction, totalVotes]
   )
 
   const handleImpulse = useCallback(
@@ -640,7 +767,21 @@ export default function GamePage() {
       })
 
       setInfluence((prev) => prev + impulse.effect.influence)
+      setCombo((prev) => prev + 1)
       setImpulseCooldowns((prev) => ({ ...prev, [impulse.id]: impulse.cooldown }))
+      setLastOutcome({
+        id: `impulse-outcome-${timestamp.getTime()}`,
+        type: "impulse",
+        headline: `Impulse fired: ${impulse.label}`,
+        detail: `${impulse.effect.sentiment.toUpperCase()} sentiment is now active. ${formatMoveList(impulse.effect.boost)}.`,
+        nextStep: "Use the cooldown window to trade the affected ticker or vote the next beat.",
+        affected: Object.keys(impulse.effect.boost ?? {}),
+        metrics: [
+          { label: "Drama", value: signedNumber(impulse.effect.drama), tone: impulse.effect.drama >= 0 ? "positive" : "negative" },
+          { label: "Influence", value: `+${impulse.effect.influence}`, tone: "positive" },
+          { label: "Cooldown", value: `${impulse.cooldown}s`, tone: "neutral" }
+        ]
+      })
 
       const event: MarketEvent = {
         id: `impulse-${timestamp.getTime()}`,
@@ -664,10 +805,63 @@ export default function GamePage() {
     [applyStockMomentum, impulseCooldowns, pushNotification, registerAction]
   )
 
-  const handleExecuteOrder = useCallback(async () => {
+  const handleExecuteOrder = useCallback(async (amountOverride?: number) => {
     if (!selectedStock) return
-    const numericAmount = Number(orderAmount)
+    const numericAmount = amountOverride ?? Number(orderAmount)
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return
+    const estimatedShares = Math.floor(numericAmount / selectedStock.price)
+    const timestamp = new Date()
+
+    if (estimatedShares <= 0) {
+      setLastOutcome({
+        id: `trade-reject-${timestamp.getTime()}`,
+        type: "trade",
+        headline: "Order rejected: size too small",
+        detail: `${selectedStock.symbol} is trading at $${selectedStock.price.toFixed(2)}. The order needs enough cash to buy or sell at least one share.`,
+        nextStep: `Raise the order above $${Math.ceil(selectedStock.price)} or pick a cheaper ticker.`,
+        affected: [selectedStock.symbol],
+        metrics: [
+          { label: "Order size", value: `$${numericAmount.toFixed(0)}`, tone: "negative" },
+          { label: "Shares", value: "0", tone: "negative" }
+        ]
+      })
+      pushNotification("Order rejected: size too small")
+      return
+    }
+
+    if (orderType === "buy" && numericAmount > cash) {
+      setLastOutcome({
+        id: `trade-reject-${timestamp.getTime()}`,
+        type: "trade",
+        headline: "Order rejected: cash limit",
+        detail: `You tried to route $${numericAmount.toFixed(0)} with $${cash.toFixed(0)} cash available.`,
+        nextStep: "Use a smaller quick size or sell an existing position first.",
+        affected: [selectedStock.symbol],
+        metrics: [
+          { label: "Cash", value: `$${cash.toFixed(0)}`, tone: "neutral" },
+          { label: "Requested", value: `$${numericAmount.toFixed(0)}`, tone: "negative" }
+        ]
+      })
+      pushNotification("Order rejected: cash limit")
+      return
+    }
+
+    if (orderType === "sell" && (!selectedHolding || selectedHolding.shares < estimatedShares)) {
+      setLastOutcome({
+        id: `trade-reject-${timestamp.getTime()}`,
+        type: "trade",
+        headline: "Order rejected: no borrow in demo",
+        detail: `You hold ${selectedHolding?.shares ?? 0} ${selectedStock.symbol} shares and tried to sell about ${estimatedShares}.`,
+        nextStep: "Buy the ticker first, or sell a smaller amount from an existing holding.",
+        affected: [selectedStock.symbol],
+        metrics: [
+          { label: "Held", value: `${selectedHolding?.shares ?? 0}`, tone: "neutral" },
+          { label: "Sell request", value: `${estimatedShares}`, tone: "negative" }
+        ]
+      })
+      pushNotification("Order rejected: no shares available")
+      return
+    }
 
     setIsExecutingOrder(true)
 
@@ -686,12 +880,27 @@ export default function GamePage() {
 
       const payload = await response.json()
       if (!response.ok || !payload.success) {
-        pushNotification(`❌ Trade failed: ${payload.error ?? "Unknown error"}`)
+        pushNotification(`Trade failed: ${payload.error ?? "Unknown error"}`)
+        setLastOutcome({
+          id: `trade-failed-${Date.now()}`,
+          type: "trade",
+          headline: "Order failed",
+          detail: payload.error ?? "The order service did not return a fill.",
+          nextStep: "Try a smaller order or switch tickers.",
+          affected: [selectedStock.symbol],
+          metrics: [{ label: "Status", value: "Rejected", tone: "negative" }]
+        })
         return
       }
 
       const trade = payload.data.trade
       const rewards = payload.data.rewards
+      const marketImpact = Number(payload.data.marketImpact ?? 0)
+      const positionAfter =
+        orderType === "buy"
+          ? (selectedHolding?.shares ?? 0) + trade.shares
+          : Math.max(0, (selectedHolding?.shares ?? 0) - trade.shares)
+      const cashAfter = orderType === "buy" ? cash - trade.totalCost : cash + trade.totalCost
 
       if (orderType === "buy") {
         setCash((prev) => prev - trade.totalCost)
@@ -754,6 +963,24 @@ export default function GamePage() {
 
       const influenceBoost = Math.max(1, Math.floor(rewards.xpGained / 40))
       setInfluence((prev) => prev + influenceBoost)
+      setCombo((prev) => prev + 1)
+      setLastOutcome({
+        id: `trade-outcome-${trade.orderId}`,
+        type: "trade",
+        headline: `Order filled: ${orderType.toUpperCase()} ${trade.shares} ${selectedStock.symbol}`,
+        detail: `${selectedStock.name} filled at $${trade.executedPrice.toFixed(2)}. Position after fill: ${positionAfter} shares.`,
+        nextStep:
+          orderType === "buy"
+            ? "Now steer the story or fire an impulse so the position has a reason to move."
+            : "Reallocate cash into the next ticker that reacts to the story beat.",
+        affected: [selectedStock.symbol],
+        metrics: [
+          { label: "Fill", value: `$${trade.totalCost.toFixed(0)}`, tone: "neutral" },
+          { label: "Cash after", value: `$${cashAfter.toFixed(0)}`, tone: cashAfter >= 0 ? "positive" : "negative" },
+          { label: "XP", value: `+${rewards.xpGained}`, tone: "positive" },
+          { label: "Impact", value: `${(marketImpact * 100).toFixed(1)}%`, tone: "neutral" }
+        ]
+      })
 
       registerAction({
         id: `trade-${trade.orderId}`,
@@ -768,11 +995,20 @@ export default function GamePage() {
       setOrderAmount("")
     } catch (error) {
       console.error("Trade execution failed", error)
-      pushNotification("❌ Trade failed: network error")
+      pushNotification("Trade failed: network error")
+      setLastOutcome({
+        id: `trade-network-${Date.now()}`,
+        type: "trade",
+        headline: "Order failed: network",
+        detail: "The client could not reach the trade route.",
+        nextStep: "Retry once. If it repeats, stay in demo mode and use narrative actions.",
+        affected: selectedStock ? [selectedStock.symbol] : [],
+        metrics: [{ label: "Status", value: "Network error", tone: "negative" }]
+      })
     } finally {
       setIsExecutingOrder(false)
     }
-  }, [orderAmount, orderType, player.id, pushNotification, registerAction, selectedStock])
+  }, [cash, orderAmount, orderType, player.id, pushNotification, registerAction, selectedHolding, selectedStock])
 
   useEffect(() => {
     updatePlayerValue(Math.round(portfolioValue))
@@ -993,6 +1229,83 @@ export default function GamePage() {
             </TabsTrigger>
           </TabsList>
 
+          <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.72fr)]">
+            <Card className="border-cyan-500/40 bg-[#02070d]">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="flex items-center text-cyan-300 text-base">
+                      <ClipboardList className="mr-2 h-4 w-4" /> Session Brief
+                    </CardTitle>
+                    <CardDescription className="text-gray-400">
+                      Build a position, steer the story, then force the market to react.
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] uppercase">
+                    Control {controlScore}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-2 px-4 pb-4 sm:grid-cols-3 sm:px-6">
+                {missionSteps.map((step, index) => (
+                  <div
+                    key={step.label}
+                    className={`border p-3 ${step.done ? "border-green-500/30 bg-green-500/10" : "border-cyan-500/20 bg-black/40"}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-cyan-100">{index + 1}. {step.label}</span>
+                      {step.done ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <span className="text-[10px] text-gray-500">OPEN</span>}
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-gray-400">{step.detail}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="border-cyan-500/40 bg-[#02070d]">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="flex items-center text-cyan-300 text-base">
+                      <Activity className="mr-2 h-4 w-4" /> Last Result
+                    </CardTitle>
+                    <CardDescription className="text-gray-400">{lastOutcome.nextStep}</CardDescription>
+                  </div>
+                  <Badge className="bg-cyan-600/40 text-[10px] uppercase">Combo {combo}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 px-4 pb-4 sm:px-6">
+                <div>
+                  <div className="text-sm font-semibold text-cyan-100">{lastOutcome.headline}</div>
+                  <p className="mt-1 text-xs leading-5 text-gray-400">{lastOutcome.detail}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {lastOutcome.metrics.map((metric) => (
+                    <div key={`${lastOutcome.id}-${metric.label}`} className="border border-cyan-500/20 bg-black/40 p-2">
+                      <div className="text-[10px] uppercase tracking-[0.08em] text-gray-500">{metric.label}</div>
+                      <div
+                        className={`mt-1 text-sm font-semibold ${
+                          metric.tone === "positive" ? "text-green-400" : metric.tone === "negative" ? "text-red-400" : "text-cyan-100"
+                        }`}
+                      >
+                        {metric.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                  <span>Affected</span>
+                  {(lastOutcome.affected.length ? lastOutcome.affected : ["none"]).map((symbol) => (
+                    <Badge key={`${lastOutcome.id}-${symbol}`} variant="outline" className="text-[10px] uppercase">
+                      {symbol}
+                    </Badge>
+                  ))}
+                  {nextMissionStep && <span className="ml-auto text-cyan-200">Next: {nextMissionStep.label}</span>}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <TabsContent value="loop" className="space-y-3 sm:space-y-5">
             <div className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[minmax(0,1.7fr)_380px]">
               <div className="contents xl:block xl:space-y-5">
@@ -1201,6 +1514,16 @@ export default function GamePage() {
                             </div>
                           </div>
                           <p className="text-xs text-gray-400 mt-2 leading-relaxed">{selectedStock.storyline}</p>
+                          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                            <div className="border border-cyan-500/20 bg-black/30 p-2">
+                              <div className="text-gray-500">Cash</div>
+                              <div className="font-semibold text-cyan-100">${cash.toFixed(0)}</div>
+                            </div>
+                            <div className="border border-cyan-500/20 bg-black/30 p-2">
+                              <div className="text-gray-500">Held</div>
+                              <div className="font-semibold text-cyan-100">{selectedHolding?.shares ?? 0} shares</div>
+                            </div>
+                          </div>
                         </div>
 
                         <div className="flex gap-2">
@@ -1232,11 +1555,42 @@ export default function GamePage() {
                           <div className="text-[10px] text-gray-400 mt-1">
                             ~{selectedStock.price > 0 ? Math.floor(Number(orderAmount || 0) / selectedStock.price) : 0} shares
                           </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            {[500, 1500, 3000].map((amount) => {
+                              const sellCapacity = (selectedHolding?.shares ?? 0) * selectedStock.price
+                              const disabled = isExecutingOrder || (orderType === "buy" ? cash < amount : sellCapacity < amount)
+                              return (
+                                <button
+                                  key={amount}
+                                  type="button"
+                                  disabled={disabled}
+                                  onClick={() => {
+                                    setOrderAmount(String(amount))
+                                    void handleExecuteOrder(amount)
+                                  }}
+                                  className="min-h-9 border border-cyan-500/20 bg-black/40 px-2 text-xs text-cyan-100 transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  Route ${amount.toLocaleString()}
+                                </button>
+                              )
+                            })}
+                            <button
+                              type="button"
+                              disabled={maxOrderAmount <= 0 || isExecutingOrder}
+                              onClick={() => {
+                                setOrderAmount(maxOrderAmount > 0 ? String(maxOrderAmount) : "")
+                                if (maxOrderAmount > 0) void handleExecuteOrder(maxOrderAmount)
+                              }}
+                              className="min-h-9 border border-cyan-500/20 bg-black/40 px-2 text-xs text-cyan-100 transition hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Route Max
+                            </button>
+                          </div>
                         </div>
 
                         <Button
-                          onClick={handleExecuteOrder}
-                          disabled={isExecutingOrder || !orderAmount}
+                          onClick={() => void handleExecuteOrder()}
+                          disabled={isExecutingOrder || !orderAmount.trim()}
                           className="min-h-11 w-full bg-cyan-500 text-black font-bold hover:bg-cyan-400 disabled:opacity-40"
                         >
                           {isExecutingOrder ? "Routing..." : `Execute ${orderType.toUpperCase()}`}
